@@ -15,7 +15,7 @@ class BehaviorDescr:
 
 class GenericBD(BehaviorDescr):
     def __init__(self, dims, num):
-        self.vec=np.zeros(num, dims)
+        self.vec=np.zeros([num, dims])
         self.dims=dims
         self.num=num
 
@@ -30,8 +30,10 @@ class GenericBD(BehaviorDescr):
         assert trajectory.shape[1]>=self.vec.shape[1], "not enough dims to extract"
         M=trajectory.shape[0]
         N=self.vec.shape[0]
-        inds=list(range(M,-1,-M//N))
+        inds=list(range(M-1,-1,-M//N))
         self.vec=trajectory[inds,:self.dims]
+
+        return self.vec
 
 
 
