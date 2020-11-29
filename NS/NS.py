@@ -17,6 +17,7 @@ from deap import tools as deap_tools
 from scoop import futures
 import yaml
 from termcolor import colored
+import tqdm
 #import cv2
 
 import Archives
@@ -72,7 +73,7 @@ class NoveltySearch:
             print(colored("Warning: len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
 
     def eval_agents(self, agents):
-        print("evaluating agents... map type is set to ",self._map)
+        #print("evaluating agents... map type is set to ",self._map)
         tt1=time.time()
         xx=list(self._map(self.problem, agents))
         tt2=time.time()
@@ -95,7 +96,9 @@ class NoveltySearch:
 
         parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
         self.eval_agents(parents)
-        for it in range(iters):
+
+        tqdm_gen = tqdm.trange(iters, desc='', leave=True)
+        for it in tqdm_gen:
             offsprings=self.generate_new_agents(parents)#mutations and crossover happen here  <<= deap can be useful here
             self.eval_agents(offsprings)
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
@@ -108,6 +111,9 @@ class NoveltySearch:
 
             parents=self.selector(individuals=pop, fit_attr="_nov")
             self.archive.update(pop)
+            
+            tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
+            tqdm_gen.refresh()
 
     def generate_new_agents(self, parents):
        

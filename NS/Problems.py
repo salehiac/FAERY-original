@@ -45,7 +45,7 @@ class HardMaze(Problem):
         self.env.close()
 
     def __call__(self, ag):
-        print("evaluating agent ", ag._idx)
+        #print("evaluating agent ", ag._idx)
 
         if hasattr(ag, "eval"):
             ag.eval()
