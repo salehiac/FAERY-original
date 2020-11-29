@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
+import time
+
 import torch
 import numpy as np
+from scoop import futures
+
 
 class Agent(ABC):
     @abstractmethod
@@ -53,6 +57,12 @@ def get_params_sum(model, trainable_only=False):
         u=sum([x.sum().item() for x in model_parameters])
         return u
 
+def identity(x):
+    """
+    because pickle and thus scoop don't like lambdas...
+    """
+    return x
+
 class SmallFC_FW(torch.nn.Module, Agent):
 
     def __init__(self, 
@@ -73,7 +83,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
 
 
         self.non_lin=_non_lin_dict[non_lin] 
-        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else lambda x: x
+        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else identity
 
 
     def forward(self, x):
@@ -139,18 +149,38 @@ class SmallFC_FW(torch.nn.Module, Agent):
                 
 
 if __name__=="__main__":
+
+    TEST_AGENTS=False
+    TEST_WITH_SCOOP=True
+
     ag=Dummy(5,2)
 
-    in_dim=4
-    out_dim=3
-    model=SmallFC_FW(in_d=in_dim,
+    if TEST_AGENTS:
+        in_dim=4
+        out_dim=3
+        
+        model=SmallFC_FW(in_d=in_dim,
             out_d=out_dim,
             num_hidden=3,
             hidden_dim=5)
 
-    z=model.check_set_get_flattened_weights()
+        z=model.check_set_get_flattened_weights()
+        batch_sz=2
+        t=torch.rand(batch_sz,in_dim)
+        out=model(t)
 
-    batch_sz=2
-    t=torch.rand(batch_sz,in_dim)
+    elif TEST_WITH_SCOOP:
+        num_ags=20
+        ags=[]
+        for i in range(num_ags):
+            ags.append(SmallFC_FW(in_d=np.random.randint(1,100),
+                out_d=np.random.randint(1,100),
+                num_hidden=np.random.randint(2,100),
+                hidden_dim=np.random.randint(1,100)))
+        t1=time.time()
+        res=list(futures.map(get_num_number_params, ags))
+        t2=time.time()
+        print("res==\n",res)
+        print("time=",t2-t1,"secs") #well, it seems faster with scoop -n 1 that with more workers. Probably setting the workers in this case is more costly than the execution
 
-    out=model(t)
+

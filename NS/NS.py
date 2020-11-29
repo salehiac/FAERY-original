@@ -13,7 +13,6 @@ import torch
 import deap
 from deap import tools as deap_tools
 from scoop import futures
-from scoop import shared as scoop_shared
 import yaml
 #import cv2
 

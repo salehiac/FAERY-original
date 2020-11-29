@@ -8,7 +8,6 @@ import gym
 import gym_fastsim
 
 from scoop import futures
-from scoop import shared as scoop_shared
 from termcolor import colored
 import BehaviorDescr
 
