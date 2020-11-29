@@ -7,15 +7,24 @@ from scoop import futures
 
 
 class Agent(ABC):
+    _num_instances=0#not threadsafe, create agents only in main thread
     @abstractmethod
     def get_flattened_weights(self):
         pass
     @abstractmethod
     def set_flattened_weights(self, w):
         pass
+    
+    @abstractmethod
+    def get_genotype_len(self):
+        pass
+    
     def __init__(self):
         self._fitness=None
         self._behavior_descr=None
+        self._idx=Agent._num_instances+1
+        Agent._num_instances+=1
+
 
 
 class Dummy(torch.nn.Module, Agent):
@@ -86,11 +95,14 @@ class SmallFC_FW(torch.nn.Module, Agent):
         self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else identity
 
 
-    def forward(self, x):
-        out=x
+    def forward(self, x, return_numpy=True):
+        """
+        x list
+        """
+        out=torch.Tensor(x).unsqueeze(0)
         for md in self.mds:
             out=self.bn(self.non_lin(md(out)))
-        return out
+        return out.detach().cpu().numpy() if return_numpy else out
 
     def get_flattened_weights(self):
         """
@@ -146,6 +158,9 @@ class SmallFC_FW(torch.nn.Module, Agent):
         assert test_passed, "this shouldn't happen"
         return test_passed
 
+    def get_genotype_len(self):
+        return get_num_number_params(self, trainable_only=True)
+
                 
 
 if __name__=="__main__":
@@ -163,6 +178,7 @@ if __name__=="__main__":
             out_d=out_dim,
             num_hidden=3,
             hidden_dim=5)
+        model.eval()
 
         z=model.check_set_get_flattened_weights()
         batch_sz=2
@@ -177,6 +193,7 @@ if __name__=="__main__":
                 out_d=np.random.randint(1,100),
                 num_hidden=np.random.randint(2,100),
                 hidden_dim=np.random.randint(1,100)))
+            ags[-1].eval()
         t1=time.time()
         res=list(futures.map(get_num_number_params, ags))
         t2=time.time()

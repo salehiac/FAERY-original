@@ -27,6 +27,8 @@ class HardMaze(Problem):
         """
         super().__init__()
         self.env = gym.make('FastsimSimpleNavigation-v0')
+        self.dim_obs=len(self.env.reset())
+        self.dim_act=self.env.action_space.shape[0]
         self.display= display
     
         if(display):
@@ -38,11 +40,15 @@ class HardMaze(Problem):
         self.bd_type=bd_type
         if bd_type=="generic":
             self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
-    
+
     def close(self):
         self.env.close()
 
     def __call__(self, ag):
+        print("evaluating agent ", ag._idx)
+
+        if hasattr(ag, "eval"):
+            ag.eval()
 
         obs=self.env.reset()
         fitness=0
@@ -53,6 +59,7 @@ class HardMaze(Problem):
                 time.sleep(0.01)
             
             action=ag(obs)
+            action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
             obs, reward, ended, info=self.env.step(action)
             fitness+=reward
             if self.bd_type!="learned":

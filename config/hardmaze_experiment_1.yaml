@@ -1,7 +1,7 @@
 ---
 hyperparams: 
-  population_size: 200
-  offspring_size: 200
+  population_size: 5
+  offspring_size: 5
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
   num_generations: 10000
 novelty_estimator:
@@ -13,8 +13,8 @@ archive:
   removal_strategy: "random" 
   max_size: 200
 mutator:
-  type: "gaussian" # types are "poly" , "gaussian",  "gaussian_adaptative" and "poly_adaptative"
-  gaussian_params: {"mu": 0.0, "sigma": 0.1, "indpb": 0.1} #Gomes' paper recommends low mutation rates (indpb)
+  type: "gaussian_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
+  gaussian_params: {"mu": 0.0, "sigma": 0.1, "indpb": 1.0} #Gomes' paper recommends low mutation rates (indpb)
 selector:
   type: "elitist"
 problem:
@@ -23,6 +23,7 @@ problem:
   max_episodes: 2000
 population:
   individual_type: "simple_fw_fc" 
+use_scoop: 0 #when set to 1, run the script with -mi scoop script.py config
 
   
 
