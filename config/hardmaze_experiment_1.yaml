@@ -1,0 +1,34 @@
+---
+hyperparams: 
+  population_size: 200
+  offspring_size: 200
+  k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
+  num_generations: 10000
+novelty_estimator:
+  type: "archive_based" #choiceas are "learned", "archive_based"
+archive:
+  type : "list_based" 
+  growth_rate: 6 #Gomes' paper ~6
+  growth_strategy: "most_novel" # choices are "most_novel", "random"
+  removal_strategy: "random" 
+  max_size: 200
+mutator:
+  type: "gaussian" # types are "poly" , "gaussian",  "gaussian_adaptative" and "poly_adaptative"
+  gaussian_params: {"mu": 0.0, "sigma": 0.1, "indpb": 0.1} #Gomes' paper recommends low mutation rates (indpb)
+selector:
+  type: "elitist"
+problem:
+  name: "hardmaze" 
+  bd_type: "generic" #choices depend on problem type
+  max_episodes: 2000
+population:
+  individual_type: "simple_fw_fc" 
+
+  
+
+
+
+
+
+
+

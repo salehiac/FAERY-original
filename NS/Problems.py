@@ -14,7 +14,7 @@ import BehaviorDescr
 
 class Problem(ABC):
     @abstractmethod
-    def __call__(self, index):
+    def __call__(self, agent):
         pass
     
 
@@ -43,10 +43,9 @@ class HardMaze(Problem):
     def close(self):
         self.env.close()
 
-    def __call__(self, index):
+    def __call__(self, ag):
 
         obs=self.env.reset()
-        ag=scoop_shared.getConst("population")[index]
         fitness=0
         behavior_info=[] 
         for i in range(self.max_episodes):
@@ -81,10 +80,9 @@ if __name__=="__main__":
         hm=HardMaze(bd_type="generic",max_episodes=2000,display=False)
         num_agents=100
         random_pop=[Agents.Dummy(in_d=5, out_d=2, out_type="list") for i in range(num_agents)]
-        scoop_shared.setConst(population=random_pop)
         
         t1=time.time()
-        results=list(futures.map(hm, range(num_agents)))
+        results=list(futures.map(hm, random_pop))
         t2=time.time()
         print("time==",t2-t1,"secs")#on my machine with 24 cores, I get a factor of about 5x when using all cores instead of just one
 
