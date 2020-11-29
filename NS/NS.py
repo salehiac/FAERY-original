@@ -100,11 +100,11 @@ class NoveltySearch:
             self.eval_agents(offsprings)
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
-            #TODO: kd-trees will be needed here at some point
             self.nov_estimator.update(archive=self.archive, pop=pop)
+            novs=self.nov_estimator()#computes novelty of all population
             for ag_i in range(len(pop)):
-                pop[ag_i]._nov=self.nov_estimator(ag_i)
-                assert _nov is not None , "debug that"
+                pop[ag_i]._nov=novs[ag_i]
+                assert pop[ag_i]._nov is not None , "debug that"
 
             parents=self.selector(individuals=pop, fit_attr="_nov")
             self.archive.update(pop)

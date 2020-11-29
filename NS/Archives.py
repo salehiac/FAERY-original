@@ -23,6 +23,9 @@ class Archive(ABC):
     def update(self, pop):
         pass
 
+    @abstractmethod
+    def __iter__(self):
+        pass
 
 
 class ListArchive(Archive):
@@ -47,7 +50,7 @@ class ListArchive(Archive):
             self.container+=[pop[i] for i in r[:self.growth_rate]]
         elif self.growth_strategy=="most_novel":
             sorted_pop=sorted(pop, key=lambda x: x._nov)[::-1]#descending order
-            self.container+=[pop[i] for i in sorted_pop[:self.growth_rate]]
+            self.container+=sorted_pop[:self.growth_rate]
 
         if len(self)>=self.max_size:
             self.manage_size()
@@ -61,21 +64,16 @@ class ListArchive(Archive):
 
     def __len__(self):
         return len(self.container)
+    
+    def __iter__(self):
+        return iter(self.container)
 
     def __str__(self):
         return str(self.container)
 
-class KdTreeBasedArchive(Archive):
-    def __init__(self):
-        raise NotImplementedError("not implemented")
-
 
 if __name__=="__main__":
-
-    la=ListArchive(max_size=3)
-    for i in range(5):
-        la.update("ag",i)
-    print(la)
+    pass
 
 
 

@@ -1,4 +1,8 @@
 from abc import ABC, abstractmethod
+from sklearn.neighbors import KDTree
+import numpy as np
+import matplotlib.pyplot as plt
+import pdb
 #import time
 #import sys
 #import os
@@ -9,7 +13,10 @@ class NoveltyEstimator(ABC):
     Interface for estimating Novelty
     """
     @abstractmethod
-    def __call__(self, idx):
+    def __call__(self):
+        """
+        estimate novelty of entire current population w.r.t istelf+archive
+        """
         pass
    
         #getattr(_pop_bds[idx].
@@ -31,12 +38,28 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
     def update(self, archive, pop):
         self.archive=archive
         self.pop=pop
+ 
+        self.pop_bds=[x._behavior_descr for x in self.pop]
+        self.pop_bds=np.concatenate(self.pop_bds, 0)
+        self.archive_bds=[x._behavior_descr for x in self.archive] 
+        
+        if len(self.archive_bds):
+            self.archive_bds=np.concatenate(self.archive_bds, 0) 
+       
+        self.kdt_bds=np.concatenate([self.archive_bds,self.pop_bds],0) if len(self.archive) else self.pop_bds
+        self.kdt = KDTree(self.kdt_bds, leaf_size=20, metric='euclidean')
 
-    def __call__(self, idx):
+    def __call__(self):
         """
-        idx  int   id of individual from the population
+        estimate novelty of entire current population w.r.t istelf+archive
         """
-        pass
+        dists, ids=self.kdt.query(self.pop_bds, self.k, return_distance=True)
+        #the first column is the point itself because the population itself is included in the kdtree
+        dists=dists[:,1:]
+        #ids=ids[:,1:]
+        novs=dists.mean(1)
+        return novs.tolist()
+
 
 class LearnedNovelty(NoveltyEstimator):
 
@@ -46,4 +69,17 @@ class LearnedNovelty(NoveltyEstimator):
     def __call__(self,idx):
         raise NotImplementedError("Learned novelty not implemented yet")
 
+
+if __name__=="__main__":
+
+    X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+    kdt = KDTree(X, leaf_size=20, metric='euclidean')
+    queries=np.array([[2,2],[5,5],[0.5,1.0]])
+    u=kdt.query(queries, k=1, return_distance=False)
+    u=u.reshape(queries.shape[0]).tolist()
+
+    plt.plot(X[:,0], X[:,1],"r*")
+    plt.plot(queries[:,0],queries[:,1],"b*")
+    plt.plot(X[u,0],X[u,1],"mx")
+    plt.show()
 
