@@ -61,9 +61,11 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         dists, ids=self.kdt.query(self.pop_bds, self.k, return_distance=True)
         #the first column is the point itself because the population itself is included in the kdtree
         dists=dists[:,1:]
-        #ids=ids[:,1:]
+        ids=ids[:,1:]
 
-        mask=dists[:,0]<dist_thresh
+        mask_1=dists[:,0]<dist_thresh
+        mask_2=ids[:,0]<len(self.archive)#this is because I want to consider an individual that is novel relative to the archive but not relative to the population as novel
+        mask=np.logical_and(mask_1,mask_2)
         dists[mask,0]=np.ones([mask.astype(int).sum()])*float("inf")*-1
         novs=dists.mean(1)
         #pdb.set_trace()

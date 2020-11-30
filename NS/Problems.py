@@ -100,7 +100,7 @@ class HardMaze(Problem):
         z=[x._behavior_descr for x in uu]
         z=np.concatenate(z,0)
         most_novel_individual_in_pop=np.argmax([x._nov for x in population])
-        pdb.set_trace()
+        #pdb.set_trace()
         real_w=self.env.map.get_real_w()
         real_h=self.env.map.get_real_w()
         z[:,0]=(z[:,0]/real_w)*self.maze_im.shape[1]
