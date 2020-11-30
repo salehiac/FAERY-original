@@ -26,7 +26,7 @@ problem:
 population:
   individual_type: "simple_fw_fc" 
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
-visualise_bds: 2 # 0 disable, 1 to logfile, 2 display
+visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root: "/tmp/" #directory where NS will create a log directory based on its main pid
 
   

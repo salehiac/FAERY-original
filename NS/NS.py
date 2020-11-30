@@ -140,7 +140,7 @@ class NoveltySearch:
             
             if self.visualise_bds!=NoveltySearch.BD_VIS_DISABLE and it%10==0:
                 q_flag=True if self.visualise_bds==NoveltySearch.BD_VIS_TO_FILE else False
-                self.problem.visualise_bds(iter(self.archive), quitely=q_flag, save_to=self.log_dir_path )
+                self.problem.visualise_bds(iter(self.archive), parents, quitely=q_flag, save_to=self.log_dir_path )
 
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
             tqdm_gen.refresh()

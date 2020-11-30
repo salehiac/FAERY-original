@@ -37,6 +37,11 @@ def create_directory_with_pid(dir_basename,remove_if_exists=True,no_pid=False):
         fl.write("created on "+get_current_time_date()+"\n")
     return dir_path
 
+class colors:
+    blue=(255,0,0)
+    green=(0,255,0)
+    red=(0,0,255)
+
 if __name__=="__main__":
     _=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=True)
     dir_path=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=False)

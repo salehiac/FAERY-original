@@ -12,6 +12,7 @@ import gym_fastsim
 from scoop import futures
 from termcolor import colored
 import BehaviorDescr
+import MiscUtils
 
 class Problem(ABC):
     @abstractmethod
@@ -81,15 +82,17 @@ class HardMaze(Problem):
         bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) if self.bd_type!="learned" else None
         return fitness, bd
 
-    def visualise_bds(self,pop, quitely=True, save_to=""):
+    def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """
         currently only for 2d generic ones of size 1, so bds should be [bd_0, ...] with bd_i of length 2
         """
         if quitely and not(len(save_to)):
             raise Exception("quitely=True requires save_to to be an existing directory")
-        pop=list(pop)
-        z=[x._behavior_descr for x in pop]
-        most_novel_individual_i=np.argmax([x._nov for x in pop])
+        arch_l=list(archive)
+        pop_l=list(population)
+        uu=arch_l+pop_l
+        z=[x._behavior_descr for x in uu]
+        most_novel_individual_in_pop=np.argmax([x._nov for x in population])
         z=np.concatenate(z,0)
         real_w=self.env.map.get_real_w()
         real_h=self.env.map.get_real_w()
@@ -98,9 +101,14 @@ class HardMaze(Problem):
         
         maze_im=self.maze_im.copy()
         for pt_i in range(z.shape[0]): 
-            maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=(0,255,0), thickness=-1)
+            if pt_i<len(arch_l):#archive individuals
+                color=MiscUtils.colors.blue
+            else:#population individuals
+                #pdb.set_trace()
+                color=MiscUtils.colors.green
+            maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=-1)
         
-        maze_im=cv2.circle(maze_im, (int(z[most_novel_individual_i,0]),int(z[most_novel_individual_i,1])) , 3, (255,0,0), thickness=-1)
+        maze_im=cv2.circle(maze_im, (int(z[most_novel_individual_in_pop,0]),int(z[most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=-1)
         goal=self.env.map.get_goals()[0]
         maze_im=cv2.circle(maze_im, 
                 (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),
