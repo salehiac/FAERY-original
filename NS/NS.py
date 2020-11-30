@@ -25,8 +25,14 @@ import NoveltyEstimators
 import BehaviorDescr
 import Problems
 import Agents
+import MiscUtils
+
 
 class NoveltySearch:
+
+    BD_VIS_DISABLE=0
+    BD_VIS_TO_FILE=1
+    BD_VIS_DISPLAY=2
 
     def __init__(self,
             archive,
@@ -37,7 +43,9 @@ class NoveltySearch:
             selector,
             n_offspring,
             agent_factory,
-            map_type="scoop"):
+            visualise_bds,
+            map_type="scoop",
+            logs_root="/tmp/ns_log/"):
         """
         archive           Archive           object implementing the Archive interface
         nov_estimator     NoveltyEstimator  object implementing the NoveltyEstimator interface. 
@@ -50,9 +58,12 @@ class NoveltySearch:
         selector          function
         n_offspring       int           
         agent_factory     function          used to convert mutated list genotypes back to agent types
+        visualise_bds     int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to the logs dir.
+                                            possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
         map_type          string            different options for sequential/parallel mapping functions. supported values currently are 
                                             "scoop" distributed map from futures.map
                                             "std"   buildin python map
+        logs_root         str               the logs diretory will be created inside logs_root
         """
         self.archive=archive
         self.archive.reset()
@@ -61,6 +72,7 @@ class NoveltySearch:
         self.problem=problem
         self._initial_pop=copy.deepcopy(initial_pop)
 
+        self.map_type=map_type
         self._map=futures.map if map_type=="scoop" else map
 
         self.mutator=mutator
@@ -70,7 +82,17 @@ class NoveltySearch:
         self.agent_factory=agent_factory
        
         if n_offspring!=len(initial_pop):
-            print(colored("Warning: len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
+            print(colored("[NS Warning] len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
+
+        self.visualise_bds= visualise_bds 
+
+        if os.path.isdir(logs_root):
+            self.logs_root=logs_root
+            self.log_dir_path=MiscUtils.create_directory_with_pid(dir_basename=logs_root+"/NS_log_",remove_if_exists=True,no_pid=False)
+            print(colored("[NS info] NS log directory was created: "+self.log_dir_path, "green",attrs=["bold"]))
+        else:
+            raise Exception("Root dir for logs not found. Please ensure that it exists before launching the script.")
+
 
     def eval_agents(self, agents):
         #print("evaluating agents... map type is set to ",self._map)
@@ -91,6 +113,9 @@ class NoveltySearch:
         """
         iters  int  number of iterations
         """
+        print(f"Starting NS with pop_sz={len(self._initial_pop)}, offspring_sz={self.n_offspring}")
+        print("Evaluation will take time.")
+        
         if reinit:
             self.archive.reset()
 
@@ -99,6 +124,7 @@ class NoveltySearch:
 
         tqdm_gen = tqdm.trange(iters, desc='', leave=True)
         for it in tqdm_gen:
+
             offsprings=self.generate_new_agents(parents)#mutations and crossover happen here  <<= deap can be useful here
             self.eval_agents(offsprings)
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
@@ -112,6 +138,10 @@ class NoveltySearch:
             parents=self.selector(individuals=pop, fit_attr="_nov")
             self.archive.update(pop)
             
+            if self.visualise_bds!=NoveltySearch.BD_VIS_DISABLE and it%10==0:
+                q_flag=True if self.visualise_bds==NoveltySearch.BD_VIS_TO_FILE else False
+                self.problem.visualise_bds(iter(self.archive), quitely=q_flag, save_to=self.log_dir_path )
+
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
             tqdm_gen.refresh()
         
@@ -158,11 +188,12 @@ if __name__=="__main__":
     # create novelty estimators
     nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=config["hyperparams"]["k"]) if config["novelty_estimator"]["type"]=="archive_based" else NoveltyEstimators.LearnedNovelty()
 
-    # create behavior descriptors
+    # create behavior descriptors and problem
     if config["problem"]["name"]=="hardmaze":
         max_episodes=config["problem"]["max_episodes"]
         bd_type=config["problem"]["bd_type"]
-        problem=Problems.HardMaze(bd_type=bd_type,max_episodes=max_episodes)
+        assets=config["problem"]["assets"]
+        problem=Problems.HardMaze(bd_type=bd_type,max_episodes=max_episodes, assets=assets)
     else:
         raise NotImplementedError("Problem type")
 
@@ -200,6 +231,7 @@ if __name__=="__main__":
 
     #create NS
     map_t="scoop" if config["use_scoop"] else "std"
+    visualise_bds=config["visualise_bds"]
     ns=NoveltySearch(archive=arch,
             nov_estimator=nov_estimator,
             mutator=mutator,
@@ -208,7 +240,9 @@ if __name__=="__main__":
             selector=selector,
             n_offspring=config["hyperparams"]["offspring_size"],
             agent_factory=make_ag,
-            map_type=map_t)
+            visualise_bds=visualise_bds,
+            map_type=map_t,
+            logs_root="/tmp/")
 
     if 0:
         elapsed_time=ns.eval_agents(population)
@@ -216,6 +250,6 @@ if __name__=="__main__":
                                                                                         # (for 200 agents) this is consistent with the 5x to 7x acceleration factor I'd seen before
 
     #do NS
-    final_pop=ns(iters=10)
+    final_pop=ns(iters=config["hyperparams"]["num_generations"])
 
     

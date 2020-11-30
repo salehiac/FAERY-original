@@ -41,6 +41,8 @@ class Dummy(torch.nn.Module, Agent):
         pass
     def set_flattened_weights(self, w):
         pass
+    def get_genotype_len(self):
+        pass
 
 
 _non_lin_dict={"tanh":torch.tanh, "relu": torch.relu, "sigmoid": torch.sigmoid}

@@ -1,9 +1,9 @@
 ---
 hyperparams: 
-  population_size: 5
-  offspring_size: 5
-  k: 3 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
-  num_generations: 10000
+  population_size: 25
+  offspring_size: 25
+  k: 5 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
+  num_generations: 1000
 novelty_estimator:
   type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
@@ -22,9 +22,12 @@ problem:
   name: "hardmaze" 
   bd_type: "generic" #choices depend on problem type
   max_episodes: 2000
+  assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 
-use_scoop: 0 #when set to 1, run the script with -mi scoop script.py config
+use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
+visualise_bds: 2 # 0 disable, 1 to logfile, 2 display
+ns_log_root: "/tmp/" #directory where NS will create a log directory based on its main pid
 
   
 
