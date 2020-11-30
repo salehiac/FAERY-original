@@ -39,8 +39,8 @@ class NoveltySearch:
             nov_estimator,
             mutator,
             problem,
-            initial_pop,
             selector,
+            n_pop,
             n_offspring,
             agent_factory,
             visualise_bds,
@@ -49,15 +49,21 @@ class NoveltySearch:
         """
         archive           Archive           object implementing the Archive interface
         nov_estimator     NoveltyEstimator  object implementing the NoveltyEstimator interface. 
-        problem           Problem           object that provides a __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
-        initial_pop       list              list[i] should be an agent compatible with problem (mapping problem state observations to actions)
-                                            Currently, considered agents should 
-                                                - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
-                                                - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task This is just to facilitate interactions with the deap library
+        problem           Problem           object that provides 
+                                                 - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
+                                                 - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
+                                                   its nearest neighbour in the archive+pop in order for the point to be considered as novel. It is also used as a threshold on novelty
+                                                   when updating the archive.
+                                                - optionally, a visualise_bds function.
         mutator           Mutator
         selector          function
+        n_pop             int 
         n_offspring       int           
-        agent_factory     function          used to convert mutated list genotypes back to agent types
+        agent_factory     function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
+                                            Currently, considered agents should 
+                                                - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
+                                                - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task 
+                                            This is just to facilitate interactions with the deap library
         visualise_bds     int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to the logs dir.
                                             possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
         map_type          string            different options for sequential/parallel mapping functions. supported values currently are 
@@ -70,8 +76,7 @@ class NoveltySearch:
 
         self.nov_estimator=nov_estimator
         self.problem=problem
-        self._initial_pop=copy.deepcopy(initial_pop)
-
+        
         self.map_type=map_type
         self._map=futures.map if map_type=="scoop" else map
         print(colored("[NS info] Using map_type "+map_type, "green",attrs=["bold"]))
@@ -81,6 +86,10 @@ class NoveltySearch:
 
         self.n_offspring=n_offspring
         self.agent_factory=agent_factory
+        
+        initial_pop=[self.agent_factory() for i in range(n_pop)]
+        initial_pop=self.generate_new_agents(initial_pop)
+        self._initial_pop=copy.deepcopy(initial_pop)
        
         if n_offspring!=len(initial_pop):
             print(colored("[NS Warning] len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
@@ -143,13 +152,13 @@ class NoveltySearch:
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
-            novs=self.nov_estimator()#computes novelty of all population
+            novs=self.nov_estimator(problem.dist_thresh)#computes novelty of all population
             for ag_i in range(len(pop)):
                 pop[ag_i]._nov=novs[ag_i]
                 assert pop[ag_i]._nov is not None , "debug that"
 
             parents=self.selector(individuals=pop, fit_attr="_nov")
-            self.archive.update(pop)
+            self.archive.update(pop, thresh=problem.dist_thresh)
             
             if self.visualise_bds!=NoveltySearch.BD_VIS_DISABLE and it%10==0:
                 q_flag=True if self.visualise_bds==NoveltySearch.BD_VIS_TO_FILE else False
@@ -165,11 +174,6 @@ class NoveltySearch:
         parents_as_list=[x.get_flattened_weights() for x in parents]
         mutated_genotype=[self.mutator(copy.deepcopy(x)) for x in parents_as_list]#deepcopy is because of deap
 
-        ##debug
-        #kk=[]
-        #for i in range(len(mutated_genotype)):
-        #    kk.append(np.array(mutated_genotype[i][0])-np.array(parents_as_list[i]))
-       
         mutated_ags=[self.agent_factory() for x in range(self.n_offspring)]
         kept=random.choices(range(len(mutated_genotype)), k=self.n_offspring)
         for i in range(len(kept)):
@@ -226,12 +230,11 @@ if __name__=="__main__":
                 out_d=out_dims,
                 num_hidden=3,
                 hidden_dim=10)
-    population=[make_ag() for i in range(num_pop)]
     
     
     # create mutator
     mutator_type=config["mutator"]["type"]
-    genotype_len=population[0].get_genotype_len()
+    genotype_len=make_ag().get_genotype_len()
     if mutator_type=="gaussian_same":
         mutator_conf=config["mutator"]["gaussian_params"]
         mu, sigma, indpb = mutator_conf["mu"], mutator_conf["sigma"], mutator_conf["indpb"]
@@ -249,8 +252,8 @@ if __name__=="__main__":
             nov_estimator=nov_estimator,
             mutator=mutator,
             problem=problem,
-            initial_pop=population,
             selector=selector,
+            n_pop=num_pop,
             n_offspring=config["hyperparams"]["offspring_size"],
             agent_factory=make_ag,
             visualise_bds=visualise_bds,

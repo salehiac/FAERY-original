@@ -46,18 +46,27 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         if len(self.archive_bds):
             self.archive_bds=np.concatenate(self.archive_bds, 0) 
        
-        self.kdt_bds=np.concatenate([self.archive_bds,self.pop_bds],0) if len(self.archive) else self.pop_bds
+        self.kdt_bds=np.concatenate([self.archive_bds,self.pop_bds],0) if len(self.archive_bds) else self.pop_bds
         self.kdt = KDTree(self.kdt_bds, leaf_size=20, metric='euclidean')
 
-    def __call__(self):
+    def __call__(self, dist_thresh):
         """
         estimate novelty of entire current population w.r.t istelf+archive
+
+        dist_thresh   float   if an individual is closer to its nearest neightbour in archive+pop than dist_thresh, then 
+                              it wont be added to the archive (without that condition you might add the same point numerous 
+                              times to the archive, as while its distance to its nearset neighbour is ~0, it couls be far from all of
+                              its second, third, .... neighbours.
         """
         dists, ids=self.kdt.query(self.pop_bds, self.k, return_distance=True)
         #the first column is the point itself because the population itself is included in the kdtree
         dists=dists[:,1:]
         #ids=ids[:,1:]
+
+        mask=dists[:,0]<dist_thresh
+        dists[mask,0]=np.ones([mask.astype(int).sum()])*float("inf")*-1
         novs=dists.mean(1)
+        #pdb.set_trace()
         return novs.tolist()
 
 

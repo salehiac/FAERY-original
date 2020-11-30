@@ -20,7 +20,7 @@ class Archive(ABC):
         pass
 
     @abstractmethod
-    def update(self, pop):
+    def update(self, pop, kdtree):
         pass
 
     @abstractmethod
@@ -44,13 +44,17 @@ class ListArchive(Archive):
     def reset(self):
         self.container.clear()
 
-    def update(self, pop):
+    def update(self, pop, thresh=0):
         if self.growth_strategy=="random":
             r=random.sample(range(len(pop)),range(self.growth_rate))
-            self.container+=[pop[i] for i in r[:self.growth_rate]]
+            candidates=[pop[i] for i in r[:self.growth_rate]]
         elif self.growth_strategy=="most_novel":
             sorted_pop=sorted(pop, key=lambda x: x._nov)[::-1]#descending order
-            self.container+=sorted_pop[:self.growth_rate]
+            #print([u._nov for u in sorted_pop][:self.growth_rate])
+            candidates=sorted_pop[:self.growth_rate]
+       
+        candidates=[c for c in candidates if c._nov>thresh]
+        self.container+=candidates
 
         if len(self)>=self.max_size:
             self.manage_size()

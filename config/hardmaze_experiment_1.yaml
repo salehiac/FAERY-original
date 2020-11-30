@@ -11,7 +11,7 @@ archive:
   growth_rate: 6 #Gomes' paper ~6
   growth_strategy: "most_novel" # choices are "most_novel", "random"
   removal_strategy: "random" 
-  max_size: 200
+  max_size: 10000
 mutator:
   type: "gaussian_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
   gaussian_params: {"mu": 0.0, "sigma": 0.1, "indpb": 1.0} #Gomes' paper recommends low mutation rates (indpb)
@@ -21,7 +21,7 @@ selector:
 problem:
   name: "hardmaze" 
   bd_type: "generic" #choices depend on problem type
-  max_episodes: 1000
+  max_episodes: 2000
   assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 

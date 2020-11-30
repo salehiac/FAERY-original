@@ -45,6 +45,8 @@ class HardMaze(Problem):
         self.bd_type=bd_type
         if bd_type=="generic":
             self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
+            self.dist_thresh=10 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
+                               #in order for x to be considerd novel
 
         self.maze_im=cv2.imread(assets["env_im"]) if len(assets) else None
         self.num_saved=0
@@ -107,10 +109,12 @@ class HardMaze(Problem):
         for pt_i in range(z.shape[0]): 
             if pt_i<len(arch_l):#archive individuals
                 color=MiscUtils.colors.blue
+                thickness=-1
             else:#population individuals
                 #pdb.set_trace()
                 color=MiscUtils.colors.green
-            maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=-1)
+                thickness=1
+            maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
         maze_im=cv2.circle(maze_im, (int(z[most_novel_individual_in_pop,0]),int(z[most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=-1)
         goal=self.env.map.get_goals()[0]
@@ -123,9 +127,10 @@ class HardMaze(Problem):
             plt.show()
         else:
             if len(save_to):
+                b,g,r=cv2.split(maze_im)
+                maze_im=cv2.merge([r,g,b])
                 cv2.imwrite(save_to+"/hardmaze_2d_bd_"+str(self.num_saved)+".png",maze_im)
                 self.num_saved+=1
-        return maze_im
 
 
 
