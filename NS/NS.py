@@ -62,7 +62,7 @@ class NoveltySearch:
         agent_factory     function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
                                             Currently, considered agents should 
                                                 - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
-                                                - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task 
+                                                - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task, _created_at_gen
                                             This is just to facilitate interactions with the deap library
         visualise_bds     int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to the logs dir.
                                             possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
@@ -88,7 +88,7 @@ class NoveltySearch:
         self.agent_factory=agent_factory
         
         initial_pop=[self.agent_factory() for i in range(n_pop)]
-        initial_pop=self.generate_new_agents(initial_pop)
+        initial_pop=self.generate_new_agents(initial_pop, generation=0)
         self._initial_pop=copy.deepcopy(initial_pop)
        
         if n_offspring!=len(initial_pop):
@@ -141,7 +141,7 @@ class NoveltySearch:
         tqdm_gen = tqdm.trange(iters, desc='', leave=True)
         for it in tqdm_gen:
 
-            offsprings=self.generate_new_agents(parents)#mutations and crossover happen here  <<= deap can be useful here
+            offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
             task_solvers, _ =self.eval_agents(offsprings)
             if len(task_solvers):
                 print(colored("[NS info] found task solvers","magenta",attrs=["bold"]))
@@ -155,7 +155,6 @@ class NoveltySearch:
             novs=self.nov_estimator(problem.dist_thresh)#computes novelty of all population
             for ag_i in range(len(pop)):
                 pop[ag_i]._nov=novs[ag_i]
-                assert pop[ag_i]._nov is not None , "debug that"
 
             parents=self.selector(individuals=pop, fit_attr="_nov")
             self.archive.update(pop, thresh=problem.dist_thresh)
@@ -164,12 +163,13 @@ class NoveltySearch:
                 q_flag=True if self.visualise_bds==NoveltySearch.BD_VIS_TO_FILE else False
                 self.problem.visualise_bds(iter(self.archive), parents, quitely=q_flag, save_to=self.log_dir_path )
 
+
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
             tqdm_gen.refresh()
         
         return parents, self.task_solvers
 
-    def generate_new_agents(self, parents):
+    def generate_new_agents(self, parents, generation:int):
        
         parents_as_list=[x.get_flattened_weights() for x in parents]
         mutated_genotype=[self.mutator(copy.deepcopy(x)) for x in parents_as_list]#deepcopy is because of deap
@@ -178,6 +178,7 @@ class NoveltySearch:
         kept=random.choices(range(len(mutated_genotype)), k=self.n_offspring)
         for i in range(len(kept)):
             mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][0])
+            mutated_ags[i]._created_at_gen=generation
 
         return mutated_ags
 

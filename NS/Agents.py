@@ -22,8 +22,12 @@ class Agent(ABC):
     def __init__(self):
         self._fitness=None
         self._behavior_descr=None
+        self._nov=None
         self._idx=Agent._num_instances+1
         Agent._num_instances+=1
+
+        self._solved_task=False
+        self._created_at_gen=-1 #to compute age
 
 
 

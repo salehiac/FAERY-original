@@ -98,8 +98,9 @@ class HardMaze(Problem):
         pop_l=list(population)
         uu=arch_l+pop_l
         z=[x._behavior_descr for x in uu]
-        most_novel_individual_in_pop=np.argmax([x._nov for x in population])
         z=np.concatenate(z,0)
+        most_novel_individual_in_pop=np.argmax([x._nov for x in population])
+        pdb.set_trace()
         real_w=self.env.map.get_real_w()
         real_h=self.env.map.get_real_w()
         z[:,0]=(z[:,0]/real_w)*self.maze_im.shape[1]
@@ -113,10 +114,12 @@ class HardMaze(Problem):
             else:#population individuals
                 #pdb.set_trace()
                 color=MiscUtils.colors.green
-                thickness=1
+                #thickness=1
+                thickness=-1
             maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
-        maze_im=cv2.circle(maze_im, (int(z[most_novel_individual_in_pop,0]),int(z[most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=-1)
+        maze_im=cv2.circle(maze_im,
+                (int(z[len(arch_l)+most_novel_individual_in_pop,0]),int(z[len(arch_l)+most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=-1)
         goal=self.env.map.get_goals()[0]
         maze_im=cv2.circle(maze_im, 
                 (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),

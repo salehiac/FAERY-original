@@ -3,7 +3,7 @@ hyperparams:
   population_size: 25
   offspring_size: 25
   k: 5 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
-  num_generations: 1000
+  num_generations: 2000
 novelty_estimator:
   type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
