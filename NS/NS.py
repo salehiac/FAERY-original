@@ -49,11 +49,11 @@ class NoveltySearch:
         """
         archive           Archive           object implementing the Archive interface
         nov_estimator     NoveltyEstimator  object implementing the NoveltyEstimator interface. 
-        problem           Problem           object that provides a __call__ function taking individual_index returning fitness and behavior_descriptors
+        problem           Problem           object that provides a __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
         initial_pop       list              list[i] should be an agent compatible with problem (mapping problem state observations to actions)
                                             Currently, considered agents should 
                                                 - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
-                                                - provide those fields: _fitness, _behavior_descr, _novelty. This is just to facilitate possible interactions with the deap library
+                                                - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task This is just to facilitate interactions with the deap library
         mutator           Mutator
         selector          function
         n_offspring       int           
@@ -74,6 +74,7 @@ class NoveltySearch:
 
         self.map_type=map_type
         self._map=futures.map if map_type=="scoop" else map
+        print(colored("[NS info] Using map_type "+map_type, "green",attrs=["bold"]))
 
         self.mutator=mutator
         self.selector=selector
@@ -93,6 +94,9 @@ class NoveltySearch:
         else:
             raise Exception("Root dir for logs not found. Please ensure that it exists before launching the script.")
 
+        #for problems for which it is relevant (e.g. hardmaze), keep track of individuals that have solved the task
+        self.task_solvers={}#key,value=generation, list(agents)
+
 
     def eval_agents(self, agents):
         #print("evaluating agents... map type is set to ",self._map)
@@ -100,16 +104,19 @@ class NoveltySearch:
         xx=list(self._map(self.problem, agents))
         tt2=time.time()
         elapsed=tt2-tt1
+        task_solvers=[]
         for ag_i in range(len(agents)):
             ag=agents[ag_i]
             ag._fitness=xx[ag_i][0]
             ag._behavior_descr=xx[ag_i][1]
-         
-        return elapsed
+            ag._solved_task=xx[ag_i][2]
+            if ag._solved_task:
+                task_solvers.append(ag)
+        return task_solvers, elapsed
 
 
 
-    def __call__(self, iters, reinit=False):
+    def __call__(self, iters, stop_on_reaching_task=True, reinit=False):
         """
         iters  int  number of iterations
         """
@@ -126,7 +133,13 @@ class NoveltySearch:
         for it in tqdm_gen:
 
             offsprings=self.generate_new_agents(parents)#mutations and crossover happen here  <<= deap can be useful here
-            self.eval_agents(offsprings)
+            task_solvers, _ =self.eval_agents(offsprings)
+            if len(task_solvers):
+                print(colored("[NS info] found task solvers","magenta",attrs=["bold"]))
+                self.task_solvers[it]=task_solvers
+                if stop_on_reaching_task:
+                    break
+
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
@@ -145,7 +158,7 @@ class NoveltySearch:
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
             tqdm_gen.refresh()
         
-        return parents
+        return parents, self.task_solvers
 
     def generate_new_agents(self, parents):
        
@@ -250,6 +263,6 @@ if __name__=="__main__":
                                                                                         # (for 200 agents) this is consistent with the 5x to 7x acceleration factor I'd seen before
 
     #do NS
-    final_pop=ns(iters=config["hyperparams"]["num_generations"])
+    final_pop, solutions=ns(iters=config["hyperparams"]["num_generations"],stop_on_reaching_task=True)
 
     

@@ -21,7 +21,7 @@ class Problem(ABC):
     
 
 class HardMaze(Problem):
-    def __init__(self, bd_type="generic", max_episodes=2000, display=False, assets={}):
+    def __init__(self, bd_type="generic", max_episodes=500, display=False, assets={}):
         """
         bd_type  str      available options are 
                               - generic   based on spatial trajectory, doesn't take orientation into account
@@ -61,6 +61,7 @@ class HardMaze(Problem):
         obs=self.env.reset()
         fitness=0
         behavior_info=[] 
+        task_solved=False
         for i in range(self.max_episodes):
             if self.display:
                 self.env.render()
@@ -74,13 +75,16 @@ class HardMaze(Problem):
                 behavior_info.append(info["robot_pos"])
             else:
                 behavior_info.append(obs)
+            
+            #check if task solved
+            if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.env.goal.get_diam():
+                task_solved=True
 
-            #print("Step %d Obs=%s  reward=%f  dist. to objective=%f  robot position=%s  End of ep=%s" % (i, str(o), r, info["dist_obj"], str(info["robot_pos"]), str(eo)))
             if ended:
                 break
         
         bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) if self.bd_type!="learned" else None
-        return fitness, bd
+        return fitness, bd, task_solved
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """

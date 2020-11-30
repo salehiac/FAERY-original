@@ -21,7 +21,7 @@ selector:
 problem:
   name: "hardmaze" 
   bd_type: "generic" #choices depend on problem type
-  max_episodes: 2000
+  max_episodes: 1000
   assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 
