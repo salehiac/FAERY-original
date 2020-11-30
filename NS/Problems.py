@@ -74,6 +74,17 @@ class HardMaze(Problem):
         bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) if self.bd_type!="learned" else None
         return fitness, bd
 
+    @staticmethod
+    def visualise_bds(pop):
+        """
+        currently only for 2d generic ones of size 1, so bds should be [bd_0, ...] with bd_i of length 2
+        """
+        z=[x._behavior_descr for x in pop]
+
+        #plt.plot(z[],z[],"r*")
+        #plt.show()
+
+
 
 
 if __name__=="__main__":

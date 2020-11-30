@@ -114,6 +114,8 @@ class NoveltySearch:
             
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
             tqdm_gen.refresh()
+        
+        return parents
 
     def generate_new_agents(self, parents):
        
@@ -213,5 +215,7 @@ if __name__=="__main__":
         print("agents evaluated in ", elapsed_time, "seconds (map type == ", map_t,")") # on my DLbox machine with 24 cores, I get 12secs with all of them vs 86secs with a single worker
                                                                                         # (for 200 agents) this is consistent with the 5x to 7x acceleration factor I'd seen before
 
+    #do NS
+    final_pop=ns(iters=10)
 
-    ns(iters=10)
+    
