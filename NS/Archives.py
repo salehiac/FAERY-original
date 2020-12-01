@@ -46,7 +46,7 @@ class ListArchive(Archive):
 
     def update(self, pop, thresh=0):
         if self.growth_strategy=="random":
-            r=random.sample(range(len(pop)),range(self.growth_rate))
+            r=random.sample(range(len(pop)),self.growth_rate)
             candidates=[pop[i] for i in r[:self.growth_rate]]
         elif self.growth_strategy=="most_novel":
             sorted_pop=sorted(pop, key=lambda x: x._nov)[::-1]#descending order

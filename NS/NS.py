@@ -155,11 +155,11 @@ class NoveltySearch:
             novs=self.nov_estimator(problem.dist_thresh)#computes novelty of all population
             for ag_i in range(len(pop)):
                 pop[ag_i]._nov=novs[ag_i]
-
+            
             parents=self.selector(individuals=pop, fit_attr="_nov")
             self.archive.update(pop, thresh=problem.dist_thresh)
             
-            if self.visualise_bds!=NoveltySearch.BD_VIS_DISABLE and it%10==0:
+            if self.visualise_bds!=NoveltySearch.BD_VIS_DISABLE:# and it%10==0:
                 q_flag=True if self.visualise_bds==NoveltySearch.BD_VIS_TO_FILE else False
                 self.problem.visualise_bds(iter(self.archive), parents, quitely=q_flag, save_to=self.log_dir_path )
 
@@ -229,8 +229,8 @@ if __name__=="__main__":
         def make_ag():
             return Agents.SmallFC_FW(in_d=in_dims,
                 out_d=out_dims,
-                num_hidden=3,
-                hidden_dim=10)
+                num_hidden=2,
+                hidden_dim=5)
     
     
     # create mutator

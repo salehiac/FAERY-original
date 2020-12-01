@@ -45,7 +45,7 @@ class HardMaze(Problem):
         self.bd_type=bd_type
         if bd_type=="generic":
             self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
-            self.dist_thresh=10 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
+            self.dist_thresh=1 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
                                #in order for x to be considerd novel
 
         self.maze_im=cv2.imread(assets["env_im"]) if len(assets) else None
@@ -115,11 +115,11 @@ class HardMaze(Problem):
                 #pdb.set_trace()
                 color=MiscUtils.colors.green
                 #thickness=1
-                thickness=-1
+                thickness=1
             maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
         maze_im=cv2.circle(maze_im,
-                (int(z[len(arch_l)+most_novel_individual_in_pop,0]),int(z[len(arch_l)+most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=-1)
+                (int(z[len(arch_l)+most_novel_individual_in_pop,0]),int(z[len(arch_l)+most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=1)
         goal=self.env.map.get_goals()[0]
         maze_im=cv2.circle(maze_im, 
                 (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),
