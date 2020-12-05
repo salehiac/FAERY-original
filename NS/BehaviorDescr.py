@@ -31,6 +31,10 @@ class BehaviorDescr:
         """
         pass
 
+    @abstractmethod
+    def get_bd_dims(self):
+        pass
+
 class GenericBD(BehaviorDescr):
     def __init__(self, dims, num):
         self.vec=np.zeros([num, dims])
@@ -52,6 +56,10 @@ class GenericBD(BehaviorDescr):
         self.vec=trajectory[inds,:self.dims]
 
         return self.vec
+
+    def get_bd_dims(self):
+
+        return self.dims*self.num
 
 
 

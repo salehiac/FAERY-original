@@ -59,36 +59,37 @@ class NoveltySearch:
             n_pop,
             n_offspring,
             agent_factory,
-            visualise_bds,
+            visualise_bds_flag,
             map_type="scoop",
             logs_root="/tmp/ns_log/"):
         """
-        archive           Archive           object implementing the Archive interface
-        nov_estimator     NoveltyEstimator  object implementing the NoveltyEstimator interface. 
-        problem           Problem           object that provides 
-                                                 - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
-                                                 - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
-                                                   its nearest neighbour in the archive+pop in order for the point to be considered as novel. It is also used as a threshold on novelty
-                                                   when updating the archive.
-                                                - optionally, a visualise_bds function.
-        mutator           Mutator
-        selector          function
-        n_pop             int 
-        n_offspring       int           
-        agent_factory     function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
-                                            Currently, considered agents should 
-                                                - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
-                                                - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task, _created_at_gen
-                                            This is just to facilitate interactions with the deap library
-        visualise_bds     int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to the logs dir.
+        archive               Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty
+        nov_estimator         NoveltyEstimator  object implementing the NoveltyEstimator interface. 
+        problem               Problem           object that provides 
+                                                     - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
+                                                     - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
+                                                       its nearest neighbour in the archive+pop in order for the point to be considered as novel. It is also used as a threshold on novelty
+                                                       when updating the archive.
+                                                    - optionally, a visualise_bds function.
+        mutator               Mutator
+        selector              function
+        n_pop                 int 
+        n_offspring           int           
+        agent_factory         function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
+                                                Currently, considered agents should 
+                                                    - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
+                                                    - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task, _created_at_gen
+                                                This is just to facilitate interactions with the deap library
+        visualise_bds_flag    int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to the logs dir.
                                             possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
-        map_type          string            different options for sequential/parallel mapping functions. supported values currently are 
-                                            "scoop" distributed map from futures.map
-                                            "std"   buildin python map
-        logs_root         str               the logs diretory will be created inside logs_root
+        map_type              string            different options for sequential/parallel mapping functions. supported values currently are 
+                                                "scoop" distributed map from futures.map
+                                                "std"   buildin python map
+        logs_root             str               the logs diretory will be created inside logs_root
         """
         self.archive=archive
-        self.archive.reset()
+        if archive is not None:
+            self.archive.reset()
 
         self.nov_estimator=nov_estimator
         self.problem=problem
@@ -110,7 +111,7 @@ class NoveltySearch:
         if n_offspring!=len(initial_pop):
             print(colored("[NS Warning] len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
 
-        self.visualise_bds= visualise_bds 
+        self.visualise_bds_flag= visualise_bds_flag
 
         if os.path.isdir(logs_root):
             self.logs_root=logs_root
@@ -151,7 +152,7 @@ class NoveltySearch:
         if save_checkpoints:
             raise NotImplementedError("checkpoint save/load not implemented yet")
         
-        if reinit:
+        if reinit and self.archive is not None:
             self.archive.reset()
 
         parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
@@ -162,12 +163,7 @@ class NoveltySearch:
 
             offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
             task_solvers, _ =self.eval_agents(offsprings)
-            if len(task_solvers):
-                print(colored("[NS info] found task solvers","magenta",attrs=["bold"]))
-                self.task_solvers[it]=task_solvers
-                if stop_on_reaching_task:
-                    break
-
+            
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
@@ -176,14 +172,18 @@ class NoveltySearch:
                 pop[ag_i]._nov=novs[ag_i]
             
             parents=self.selector(individuals=pop, fit_attr="_nov")
-            self.archive.update(pop, thresh=problem.dist_thresh)
+            if self.archive is not None:
+                self.archive.update(pop, thresh=problem.dist_thresh)
             
-            if self.visualise_bds!=NoveltySearch.BD_VIS_DISABLE:# and it%10==0:
-                q_flag=True if self.visualise_bds==NoveltySearch.BD_VIS_TO_FILE else False
-                self.problem.visualise_bds(iter(self.archive), parents, quitely=q_flag, save_to=self.log_dir_path )
+            self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+            
+            if len(task_solvers):
+                print(colored("[NS info] found task solvers","magenta",attrs=["bold"]))
+                self.task_solvers[it]=task_solvers
+                if stop_on_reaching_task:
+                    break
 
-
-            tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive)}")
+            tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
             tqdm_gen.refresh()
         
         return parents, self.task_solvers
@@ -200,10 +200,13 @@ class NoveltySearch:
             mutated_ags[i]._created_at_gen=generation
 
         return mutated_ags
-
-
-
-
+    
+    def visualise_bds(self, agents):
+         
+        if self.visualise_bds_flag!=NoveltySearch.BD_VIS_DISABLE:# and it%10==0:
+            q_flag=True if self.visualise_bds_flag==NoveltySearch.BD_VIS_TO_FILE else False
+            archive_it=iter(self.archive) if self.archive is not None else []
+            self.problem.visualise_bds(archive_it, agents, quitely=q_flag, save_to=self.log_dir_path )
 
 
 if __name__=="__main__":
@@ -226,16 +229,6 @@ if __name__=="__main__":
         with open(args.config,"r") as fl:
             config=yaml.load(fl,Loader=yaml.FullLoader)
 
-        # create archive types (if used)
-        arch_types={"list_based": Archives.ListArchive}
-        arch=arch_types[config["archive"]["type"]](max_size=config["archive"]["max_size"],
-                growth_rate=config["archive"]["growth_rate"],
-                growth_strategy=config["archive"]["growth_strategy"],
-                removal_strategy=config["archive"]["removal_strategy"])
-
-        # create novelty estimators
-        nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=config["hyperparams"]["k"]) if config["novelty_estimator"]["type"]=="archive_based" else NoveltyEstimators.LearnedNovelty()
-
         # create behavior descriptors and problem
         if config["problem"]["name"]=="hardmaze":
             max_steps=config["problem"]["max_steps"]
@@ -245,6 +238,20 @@ if __name__=="__main__":
             problem=HardMaze.HardMaze(bd_type=bd_type,max_steps=max_steps, assets=assets)
         else:
             raise NotImplementedError("Problem type")
+
+        # create novelty estimators and if necessary, archives
+        if config["novelty_estimator"]["type"]=="archive_based":
+            nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=config["hyperparams"]["k"])
+            arch_types={"list_based": Archives.ListArchive}
+            arch=arch_types[config["archive"]["type"]](max_size=config["archive"]["max_size"],
+                    growth_rate=config["archive"]["growth_rate"],
+                    growth_strategy=config["archive"]["growth_strategy"],
+                    removal_strategy=config["archive"]["removal_strategy"])
+        elif config["novelty_estimator"]["type"]=="learned":
+            bd_dims=problem.get_bd_dims()
+            embedding_dims=bd_dims
+            nov_estimator=NoveltyEstimators.LearnedNovelty(in_dim=bd_dims, emb_dim=embedding_dims)
+            arch=None
 
         #create selector
         if config["selector"]["type"]=="elitist":
@@ -260,8 +267,8 @@ if __name__=="__main__":
             def make_ag():
                 return Agents.SmallFC_FW(in_d=in_dims,
                     out_d=out_dims,
-                    num_hidden=2,
-                    hidden_dim=5)
+                    num_hidden=3,
+                    hidden_dim=10)
         
         
         # create mutator
@@ -294,7 +301,7 @@ if __name__=="__main__":
                 n_pop=num_pop,
                 n_offspring=config["hyperparams"]["offspring_size"],
                 agent_factory=make_ag,
-                visualise_bds=visualise_bds,
+                visualise_bds_flag=visualise_bds,
                 map_type=map_t,
                 logs_root="/tmp/")
 
@@ -320,7 +327,7 @@ if __name__=="__main__":
                 n_pop=num_pop,
                 n_offspring=config["hyperparams"]["offspring_size"],
                 agent_factory=make_ag,
-                visualise_bds=visualise_bds,
+                visualise_bds_flag=visualise_bds,
                 map_type=map_t,
                 logs_root="/tmp/")
 

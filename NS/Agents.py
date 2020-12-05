@@ -22,6 +22,8 @@ import torch
 import numpy as np
 from scoop import futures
 
+import MiscUtils
+
 
 class Agent(ABC):
     _num_instances=0#not threadsafe, create agents only in main thread
@@ -89,11 +91,6 @@ def get_params_sum(model, trainable_only=False):
         u=sum([x.sum().item() for x in model_parameters])
         return u
 
-def identity(x):
-    """
-    because pickle and thus scoop don't like lambdas...
-    """
-    return x
 
 class SmallFC_FW(torch.nn.Module, Agent):
 
@@ -115,7 +112,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
 
 
         self.non_lin=_non_lin_dict[non_lin] 
-        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else identity
+        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else MiscUtils.identity
 
 
     def forward(self, x, return_numpy=True):
@@ -123,8 +120,9 @@ class SmallFC_FW(torch.nn.Module, Agent):
         x list
         """
         out=torch.Tensor(x).unsqueeze(0)
-        for md in self.mds:
+        for md in self.mds[:-1]:
             out=self.bn(self.non_lin(md(out)))
+        out=self.mds[-1](out)
         return out.detach().cpu().numpy() if return_numpy else out
 
     def get_flattened_weights(self):

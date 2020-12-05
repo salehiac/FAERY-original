@@ -19,12 +19,15 @@
 from abc import ABC, abstractmethod
 from sklearn.neighbors import KDTree
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 import pdb
 #import time
 #import sys
 #import os
 #import copy
+
+import MiscUtils
 
 class NoveltyEstimator(ABC):
     """
@@ -40,7 +43,7 @@ class NoveltyEstimator(ABC):
         #getattr(_pop_bds[idx].
         #setattr(_pop_bds[idx], novelty_attr)   etc etc
     @abstractmethod
-    def update(self, archive, pop):
+    def update(self, pop, archive=None):
         pass
 
 
@@ -53,7 +56,7 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         self.archive=None
         self.pop=None
 
-    def update(self, archive, pop):
+    def update(self, pop, archive):
         self.archive=archive
         self.pop=pop
  
@@ -75,6 +78,8 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
                               it wont be added to the archive (without that condition you might add the same point numerous 
                               times to the archive, as while its distance to its nearset neighbour is ~0, it couls be far from all of
                               its second, third, .... neighbours.
+
+        returns novelties as unsorted list
         """
         dists, ids=self.kdt.query(self.pop_bds, self.k, return_distance=True)
         #the first column is the point itself because the population itself is included in the kdtree
@@ -92,23 +97,76 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
 
 class LearnedNovelty(NoveltyEstimator):
 
-    def __init__(self):
-        pass
+    def __init__(self, in_dim, emb_dim, batch_sz=128):
 
-    def __call__(self,idx):
-        raise NotImplementedError("Learned novelty not implemented yet")
+        self.frozen=MiscUtils.SmallEncoder(in_dim,
+            emb_dim,
+            num_hidden=5,
+            non_lin="tanh",
+            use_bn=False)
+        self.frozen.eval()
+        
+        self.learnt=MiscUtils.SmallEncoder(in_dim,
+            emb_dim,
+            num_hidden=5,
+            non_lin="tanh",
+            use_bn=False)
+       
+        self.optimizer = torch.optim.SGD(self.learnt.parameters(), lr=1e-3)
+        self.archive=None
+        self.pop=None
+        self.batch_sz=batch_sz
+        
+    def update(self, pop, archive=None):
+        
+        self.pop=pop
+ 
+        self.pop_bds=[x._behavior_descr for x in self.pop]
+        self.pop_bds=np.concatenate(self.pop_bds, 0)
+    
+    def __call__(self, dist_tresh):
 
+        #self.pop_bds is of size NxD with D the dimensions of the behavior space
+      
+        pop_novs=[]
+        for i in range(0,self.pop_bds.shape[0],self.batch_sz):
+            batch=torch.Tensor(self.pop_bds[i:i+self.batch_sz])
+            with torch.no_grad():
+                e_frozen=self.frozen(batch)
+                self.learnt.eval()
+                e_pred=self.learnt(batch)
+                diff=(e_pred-e_frozen).norm(dim=1)
+                pop_novs+=diff.cpu().detach().tolist()
+            
+            self.learnt.train()
+            self.optimizer.zero_grad()
+            e_l=self.learnt(batch)
+            loss=(e_l-e_frozen).norm()**2
+            loss.backward()
+            self.optimizer.step()
+
+        assert len(pop_novs)==self.pop_bds.shape[0], "that shouldn't happen"
+        return pop_novs
 
 if __name__=="__main__":
 
-    X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
-    kdt = KDTree(X, leaf_size=20, metric='euclidean')
-    queries=np.array([[2,2],[5,5],[0.5,1.0]])
-    u=kdt.query(queries, k=1, return_distance=False)
-    u=u.reshape(queries.shape[0]).tolist()
+    if 0:
 
-    plt.plot(X[:,0], X[:,1],"r*")
-    plt.plot(queries[:,0],queries[:,1],"b*")
-    plt.plot(X[u,0],X[u,1],"mx")
-    plt.show()
+        X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+        kdt = KDTree(X, leaf_size=20, metric='euclidean')
+        queries=np.array([[2,2],[5,5],[0.5,1.0]])
+        u=kdt.query(queries, k=1, return_distance=False)
+        u=u.reshape(queries.shape[0]).tolist()
+
+        plt.plot(X[:,0], X[:,1],"r*")
+        plt.plot(queries[:,0],queries[:,1],"b*")
+        plt.plot(X[u,0],X[u,1],"mx")
+        plt.show()
+
+    if 1:
+
+        ln=LearnedNovelty(2,2)
+        ln.pop_bds=np.random.rand(218,2)
+        ln()
+
 

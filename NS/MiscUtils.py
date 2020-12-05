@@ -21,6 +21,7 @@ import os
 from datetime import datetime
 
 import numpy as np
+import torch
 import functools
 
 def get_current_time_date():
@@ -59,6 +60,44 @@ class colors:
     red=(255,0,0)
     green=(0,255,0)
     blue=(0,0,255)
+
+_non_lin_dict={"tanh":torch.tanh, "relu": torch.relu, "sigmoid": torch.sigmoid}
+def identity(x):
+    """
+    because pickle and thus scoop don't like lambdas...
+    """
+    return x
+
+class SmallEncoder(torch.nn.Module):
+    def __init__(self, 
+            in_d,
+            out_d,
+            num_hidden=3,
+            non_lin="relu",
+            use_bn=False):
+        torch.nn.Module.__init__(self)
+
+        hidden_dim=2*in_d
+        self.mds=torch.nn.ModuleList([torch.nn.Linear(in_d, hidden_dim)])
+
+        for i in range(num_hidden-1):
+            self.mds.append(torch.nn.Linear(hidden_dim, hidden_dim))
+        self.mds.append(torch.nn.Linear(hidden_dim, out_d))
+
+
+        self.non_lin=_non_lin_dict[non_lin] 
+        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else identity
+
+    def forward(self, x):
+        """
+        x list
+        """
+        out=torch.Tensor(x)
+        for md in self.mds[:-1]:
+            out=self.bn(self.non_lin(md(out)))
+
+        return self.mds[-1](out)
+
 
 if __name__=="__main__":
     _=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=True)

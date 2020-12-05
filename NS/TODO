@@ -8,6 +8,7 @@ Note: doesn't sound like a good idea to have cavefly as an env here, as the main
                            is there a way to interpret learned BDs as "exploratory" etc?
                    - kuka
 
+Note: dist_thresh is now unused in the novelty_estimator hierarchy, it should be removed
 
 -̶ ̶a̶d̶d̶ ̶c̶a̶v̶e̶f̶l̶y̶ ̶a̶n̶d̶ ̶a̶ ̶g̶r̶a̶s̶p̶i̶n̶g̶ ̶e̶n̶v̶   cavefly was a bad idea
 - First things first, finish implementing everything and test everything with hardmaze before doing anything else

@@ -58,12 +58,17 @@ class HardMaze(Problem):
             self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
             self.dist_thresh=1 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
                                #in order for x to be considerd novel
+        
+        self.goal_radius=42# Note that the diameter returned by self.env.goal.get_diam() is 7.0 by default (which would be 21.0 in the 200x200 image). I'm doubling that for faster experiments.
 
         self.maze_im=cv2.imread(assets["env_im"]) if len(assets) else None
         self.num_saved=0
 
     def close(self):
         self.env.close()
+
+    def get_bd_dims(self):
+        return self.bd_extractor.get_bd_dims()
 
     def __call__(self, ag):
         #print("evaluating agent ", ag._idx)
@@ -90,8 +95,10 @@ class HardMaze(Problem):
                 behavior_info.append(obs)
             
             #check if task solved
-            if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.env.goal.get_diam():#diameter is 7.0 by default
+            if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.goal_radius:
                 task_solved=True
+                ended=True
+                break#otherwise the robot might move away from the goal
 
             if ended:
                 break
@@ -113,7 +120,7 @@ class HardMaze(Problem):
         most_novel_individual_in_pop=np.argmax([x._nov for x in population])
         #pdb.set_trace()
         real_w=self.env.map.get_real_w()
-        real_h=self.env.map.get_real_w()
+        real_h=self.env.map.get_real_h()
         z[:,0]=(z[:,0]/real_w)*self.maze_im.shape[1]
         z[:,1]=(z[:,1]/real_h)*self.maze_im.shape[0]
         
@@ -126,15 +133,21 @@ class HardMaze(Problem):
                 #pdb.set_trace()
                 color=MiscUtils.colors.green
                 #thickness=1
-                thickness=1
+                thickness=-1
             maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
         maze_im=cv2.circle(maze_im,
-                (int(z[len(arch_l)+most_novel_individual_in_pop,0]),int(z[len(arch_l)+most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=1)
+                (int(z[len(arch_l)+most_novel_individual_in_pop,0]),int(z[len(arch_l)+most_novel_individual_in_pop,1])) , 3, color=MiscUtils.colors.red, thickness=-1)
+        
         goal=self.env.map.get_goals()[0]
+        
         maze_im=cv2.circle(maze_im, 
                 (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),
                 3, (0,0,0), thickness=-1)
+        maze_im=cv2.circle(maze_im, 
+                (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),
+                int(self.goal_radius*self.maze_im.shape[0]/real_h), (0,0,0), thickness=1)
+
 
         if not quitely:
             plt.imshow(maze_im)
