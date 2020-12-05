@@ -1,9 +1,9 @@
 ---
 hyperparams: 
   population_size: 100
-  offspring_size: 100
+  offspring_size: 200
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
-  num_generations: 2000
+  num_generations: 200
 novelty_estimator:
   type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
@@ -13,8 +13,9 @@ archive:
   removal_strategy: "random" 
   max_size: 10000
 mutator:
-  type: "gaussian_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
+  type: "poly_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
   gaussian_params: {"mu": 0.0, "sigma": 0.2, "indpb": 0.8} #Gomes' paper recommends low mutation rates (indpb)
+  poly_params: {"eta": 15.0, "low": -5.0, "up": 5.0, "indpb": 0.1} #values used in diversity algorithms repo
 selector:
   type: "elitist" # choices are "nsga2", "elitist", "tournament", "roulette", "random". Note that except nsag2 which is based on both fintess and novelty, all other choices 
                   #are purely based on novlety
@@ -28,6 +29,7 @@ population:
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root: "/tmp/" #directory where NS will create a log directory based on its main pid
+save_checkpoints: 0 # 0 don't save, i save every i generations
 
   
 

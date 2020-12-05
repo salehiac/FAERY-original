@@ -32,6 +32,7 @@ import deap
 from deap import tools as deap_tools
 from scoop import futures
 import yaml
+import argparse
 from termcolor import colored
 import tqdm
 #import cv2
@@ -140,12 +141,15 @@ class NoveltySearch:
 
 
 
-    def __call__(self, iters, stop_on_reaching_task=True, reinit=False):
+    def __call__(self, iters, stop_on_reaching_task=True, reinit=False, save_checkpoints=0):
         """
         iters  int  number of iterations
         """
         print(f"Starting NS with pop_sz={len(self._initial_pop)}, offspring_sz={self.n_offspring}")
         print("Evaluation will take time.")
+
+        if save_checkpoints:
+            raise NotImplementedError("checkpoint save/load not implemented yet")
         
         if reinit:
             self.archive.reset()
@@ -204,85 +208,122 @@ class NoveltySearch:
 
 if __name__=="__main__":
 
-    if len(sys.argv)!=2:
-        raise Exception("Usage: ",sys.argv[0], " <yaml_config>")
+    #please don't abuse the parser. Algorithmic params should be set in the yaml files
+    parser = argparse.ArgumentParser(description='Novelty Search.')
+    parser.add_argument('--config', type=str,  help="yaml config file for ns", default="")
+    parser.add_argument('--resume', type=str,  help="resume exectution from a checkpoint directory", default="")
 
-    ### create ns component from yaml file
-    with open(sys.argv[1],"r") as fl:
-        config=yaml.load(fl,Loader=yaml.FullLoader)
+    args = parser.parse_args()
 
-    # create archive types (if used)
-    arch_types={"list_based": Archives.ListArchive}
-    arch=arch_types[config["archive"]["type"]](max_size=config["archive"]["max_size"],
-            growth_rate=config["archive"]["growth_rate"],
-            growth_strategy=config["archive"]["growth_strategy"],
-            removal_strategy=config["archive"]["removal_strategy"])
+    if len(args.config) and len(args.resume):
+        raise Exception("only one of --config or --resume should be provided.")
 
-    # create novelty estimators
-    nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=config["hyperparams"]["k"]) if config["novelty_estimator"]["type"]=="archive_based" else NoveltyEstimators.LearnedNovelty()
+    if not (len(args.config) or len(args.resume)):
+        raise Exception("Either --config or --resume should be provided.")
 
-    # create behavior descriptors and problem
-    if config["problem"]["name"]=="hardmaze":
-        max_steps=config["problem"]["max_steps"]
-        bd_type=config["problem"]["bd_type"]
-        assets=config["problem"]["assets"]
-        import HardMaze
-        problem=HardMaze.HardMaze(bd_type=bd_type,max_steps=max_steps, assets=assets)
-    else:
-        raise NotImplementedError("Problem type")
+    if len(args.config):
+        ### create ns component from yaml file
+        with open(args.config,"r") as fl:
+            config=yaml.load(fl,Loader=yaml.FullLoader)
 
-    #create selector
-    if config["selector"]["type"]=="elitist":
-        selector=functools.partial(deap_tools.selBest,k=config["hyperparams"]["population_size"])
-    else:
-        raise NotImplementedError("selector")
+        # create archive types (if used)
+        arch_types={"list_based": Archives.ListArchive}
+        arch=arch_types[config["archive"]["type"]](max_size=config["archive"]["max_size"],
+                growth_rate=config["archive"]["growth_rate"],
+                growth_strategy=config["archive"]["growth_strategy"],
+                removal_strategy=config["archive"]["removal_strategy"])
 
-    #create population
-    in_dims=problem.dim_obs
-    out_dims=problem.dim_act
-    num_pop=config["hyperparams"]["population_size"]
-    if config["population"]["individual_type"]=="simple_fw_fc":
-        def make_ag():
-            return Agents.SmallFC_FW(in_d=in_dims,
-                out_d=out_dims,
-                num_hidden=2,
-                hidden_dim=5)
+        # create novelty estimators
+        nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=config["hyperparams"]["k"]) if config["novelty_estimator"]["type"]=="archive_based" else NoveltyEstimators.LearnedNovelty()
+
+        # create behavior descriptors and problem
+        if config["problem"]["name"]=="hardmaze":
+            max_steps=config["problem"]["max_steps"]
+            bd_type=config["problem"]["bd_type"]
+            assets=config["problem"]["assets"]
+            import HardMaze
+            problem=HardMaze.HardMaze(bd_type=bd_type,max_steps=max_steps, assets=assets)
+        else:
+            raise NotImplementedError("Problem type")
+
+        #create selector
+        if config["selector"]["type"]=="elitist":
+            selector=functools.partial(deap_tools.selBest,k=config["hyperparams"]["population_size"])
+        else:
+            raise NotImplementedError("selector")
+
+        #create population
+        in_dims=problem.dim_obs
+        out_dims=problem.dim_act
+        num_pop=config["hyperparams"]["population_size"]
+        if config["population"]["individual_type"]=="simple_fw_fc":
+            def make_ag():
+                return Agents.SmallFC_FW(in_d=in_dims,
+                    out_d=out_dims,
+                    num_hidden=2,
+                    hidden_dim=5)
+        
+        
+        # create mutator
+        mutator_type=config["mutator"]["type"]
+        genotype_len=make_ag().get_genotype_len()
+        if mutator_type=="gaussian_same":
+            mutator_conf=config["mutator"]["gaussian_params"]
+            mu, sigma, indpb = mutator_conf["mu"], mutator_conf["sigma"], mutator_conf["indpb"]
+            mus = [mu]*genotype_len
+            sigmas = [sigma]*genotype_len
+            mutator=functools.partial(deap_tools.mutGaussian,mu=mus, sigma=sigmas, indpb=indpb)
+
+        elif mutator_type=="poly_same":
+            mutator_conf=config["mutator"]["poly_params"]
+            eta, low, up, indpb = mutator_conf["eta"], mutator_conf["low"], mutator_conf["up"], mutator_conf["indpb"] 
+            mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=eta, low=low, up=up, indpb=indpb)
+
+        else:
+            raise NotImplementedError("mutation type")
+
+
+        #create NS
+        map_t="scoop" if config["use_scoop"] else "std"
+        visualise_bds=config["visualise_bds"]
+        ns=NoveltySearch(archive=arch,
+                nov_estimator=nov_estimator,
+                mutator=mutator,
+                problem=problem,
+                selector=selector,
+                n_pop=num_pop,
+                n_offspring=config["hyperparams"]["offspring_size"],
+                agent_factory=make_ag,
+                visualise_bds=visualise_bds,
+                map_type=map_t,
+                logs_root="/tmp/")
+
+        if 0:
+            elapsed_time=ns.eval_agents(population)
+            print("agents evaluated in ", elapsed_time, "seconds (map type == ", map_t,")") # on my DLbox machine with 24 cores, I get 12secs with all of them vs 86secs with a single worker
+                                                                                            # (for 200 agents) this is consistent with the 5x to 7x acceleration factor I'd seen before
+
+        MiscUtils.bash_command(["cp", sys.argv[1], ns.log_dir_path+"/config.yaml"])
+        
+        #do NS
+        final_pop, solutions=ns(iters=config["hyperparams"]["num_generations"],stop_on_reaching_task=True, save_checkpoints=config["save_checkpoints"])
     
-    
-    # create mutator
-    mutator_type=config["mutator"]["type"]
-    genotype_len=make_ag().get_genotype_len()
-    if mutator_type=="gaussian_same":
-        mutator_conf=config["mutator"]["gaussian_params"]
-        mu, sigma, indpb = mutator_conf["mu"], mutator_conf["sigma"], mutator_conf["indpb"]
-        mus = [mu]*genotype_len
-        sigmas = [sigma]*genotype_len
-        mutator=functools.partial(deap_tools.mutGaussian,mu=mus, sigma=sigmas, indpb=indpb)
-    else:
-        raise NotImplementedError("mutation type")
+    elif len(args.resume):
+
+        raise Exception("not implemented yet")
+        
+        ns=NoveltySearch(archive=arch,
+                nov_estimator=nov_estimator,
+                mutator=mutator,
+                problem=problem,
+                selector=selector,
+                n_pop=num_pop,
+                n_offspring=config["hyperparams"]["offspring_size"],
+                agent_factory=make_ag,
+                visualise_bds=visualise_bds,
+                map_type=map_t,
+                logs_root="/tmp/")
 
 
-    #create NS
-    map_t="scoop" if config["use_scoop"] else "std"
-    visualise_bds=config["visualise_bds"]
-    ns=NoveltySearch(archive=arch,
-            nov_estimator=nov_estimator,
-            mutator=mutator,
-            problem=problem,
-            selector=selector,
-            n_pop=num_pop,
-            n_offspring=config["hyperparams"]["offspring_size"],
-            agent_factory=make_ag,
-            visualise_bds=visualise_bds,
-            map_type=map_t,
-            logs_root="/tmp/")
 
-    if 0:
-        elapsed_time=ns.eval_agents(population)
-        print("agents evaluated in ", elapsed_time, "seconds (map type == ", map_t,")") # on my DLbox machine with 24 cores, I get 12secs with all of them vs 86secs with a single worker
-                                                                                        # (for 200 agents) this is consistent with the 5x to 7x acceleration factor I'd seen before
 
-    #do NS
-    final_pop, solutions=ns(iters=config["hyperparams"]["num_generations"],stop_on_reaching_task=True)
-
-    

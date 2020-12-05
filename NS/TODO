@@ -9,19 +9,21 @@ Note: doesn't sound like a good idea to have cavefly as an env here, as the main
                    - kuka
 
 
--̶ ̶a̶d̶d̶ ̶c̶a̶v̶e̶f̶l̶y̶ ̶a̶n̶d̶ ̶a̶ ̶g̶r̶a̶s̶p̶i̶n̶g̶ ̶e̶n̶v̶
+-̶ ̶a̶d̶d̶ ̶c̶a̶v̶e̶f̶l̶y̶ ̶a̶n̶d̶ ̶a̶ ̶g̶r̶a̶s̶p̶i̶n̶g̶ ̶e̶n̶v̶   cavefly was a bad idea
 - First things first, finish implementing everything and test everything with hardmaze before doing anything else
-- Add saving configuration to log directory
-- Add resume from given generation
-- Add polynomial mutations instead of gaussian
+-̶ ̶A̶d̶d̶ ̶s̶a̶v̶i̶n̶g̶ ̶c̶o̶n̶f̶i̶g̶u̶r̶a̶t̶i̶o̶n̶ ̶t̶o̶ ̶l̶o̶g̶ ̶d̶i̶r̶e̶c̶t̶o̶r̶y̶
+- Add resume from given generation               => not necessary yet, we'll do that once something gets cut in the middle :). Some stub is in place though
+-̶ ̶A̶d̶d̶ ̶p̶o̶l̶y̶n̶o̶m̶i̶a̶l̶ ̶m̶u̶t̶a̶t̶i̶o̶n̶s̶ ̶i̶n̶s̶t̶e̶a̶d̶ ̶o̶f̶ ̶g̶a̶u̶s̶s̶i̶a̶n̶
 - run experiments with default behavior descriptors (hardmaze first)
 - run experiments with other bds
 - run experiments regarding archive-less novelty with two encoders
 - run experiments comparing behavior trees with FC controllers
 - Cleanup by separating abstract classes in their own files
+- move parsing config to somewhere else
 - Add contributors to headers etc
 - Make sure that you can use gpl when some of the dependencies (e.g. procgen) are under Apache2 (and if using mujoco, it's even worse)
 - make sure problems are imported in ns.py only based on configuration (why import some weird stuff when you need hardmaze only)
+- yapf it all up
 - transfer from bitbucket to github
 - (optional) Add an ipyparallel version
 

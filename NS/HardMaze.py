@@ -90,7 +90,7 @@ class HardMaze(Problem):
                 behavior_info.append(obs)
             
             #check if task solved
-            if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.env.goal.get_diam():
+            if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.env.goal.get_diam():#diameter is 7.0 by default
                 task_solved=True
 
             if ended:
