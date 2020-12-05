@@ -3,6 +3,7 @@
 import procgen
 import gym
 import torch
+import matplotlib.pyplot as plt
 
 import time
 
@@ -10,36 +11,35 @@ debug_env_seeds=[1053831044, 133241156]
 interesting_envs=[128209398]#this one has an enemy and is elongated towards the left
 
 
+def Identity(x):
+    return x
+
 class Conv3x3(torch.nn.Module):
 
     def __init__(self,
             in_c,
             out_c,
+            k_sz=3,
             stride=1,
-            nonlin=True,
-            tanh=False):
+            non_lin="relu",
+            bn=False):
 
         super().__init__()
 
-        self.use_tanh=tanh
-        
         self.cnv=torch.nn.Conv2d(in_c,
                 out_c,
-                kernel_size=3,
+                kernel_size=k_sz,
                 stride=stride,
                 padding=1,
                 bias=True)
 
-        self.bn=torch.nn.BatchNorm2d(out_c) if nonlin else None
+        nonlins={"relu":torch.relu, "tanh":torch.tanh}
+        self.non_lin=nonlins[non_lin] if len(non_lin) else Identity
+        self.bn=torch.nn.BatchNorm2d(out_c) if bn else Identity
 
     def forward(self,tns):
 
-        out=self.cnv(tns)
-        if self.bn is not None:
-            if not self.use_tanh:
-                out=torch.nn.functional.relu(self.bn(out))
-            else:
-                out=torch.nn.functional.tanh(out)
+        out=self.non_lin(self.bn(self.cnv(tns)))
 
         return out
  
@@ -61,6 +61,13 @@ class TinyController(torch.nn.Module):
 
 
 
+def get_patch(im, d):
+    """
+    im np array of size HxWxC
+    d  size of patch to extract
+    """
+    w,h,c=im.shape
+    return im[h//2-d//2:h//2+d//2, w//2-d//2: w//2+d//2, :]
 
 if __name__=="__main__":
 
@@ -69,21 +76,25 @@ if __name__=="__main__":
     print("available_procgen_envs:\n",available_procgen_envs)
     
     
-    #env = gym.make('procgen:procgen-maze-v0',render="human")
-    #env = gym.make('procgen:procgen-caveflyer-v0',render="human",start_level=0)
-    #env = gym.make('procgen:procgen-caveflyer-v0',render="human", distribution_mode="exploration", use_backgrounds=False)
-    env = gym.make('procgen:procgen-caveflyer-v0',render="rgb_array", distribution_mode="exploration", use_backgrounds=False)
-    obs = env.reset()
+    #env = gym.make('procgen:procgen-caveflyer-v0',render_mode="rgb_array", distribution_mode="exploration", use_backgrounds=False)
+    #env = gym.make('procgen:procgen-caveflyer-v0',render_mode="human", distribution_mode="exploration", use_backgrounds=False)
+    #env = gym.make('procgen:procgen-caveflyer-v0',render_mode="human", distribution_mode="exploration", use_backgrounds=False, center_agent=True)
+    #env = gym.make('procgen:procgen-caveflyer-v0',render_mode="rgb_array", distribution_mode="exploration", use_backgrounds=False, center_agent=True)
+    env = gym.make('procgen:procgen-caveflyer-v0',render_mode="rgb_array", distribution_mode="exploration", use_backgrounds=False, center_agent=True)
+    #obs = env.reset()
     step = 0
-    #while True:
-    while 1:
-        obs, rew, done, info = env.step(env.action_space.sample())
+    #while 1:
+    for _ in range(50):
+        action=env.action_space.sample()
+        print(action)
+        obs, rew, done, info = env.step(action)
+        patch=get_patch(info["rgb"],200)
+        #patch=get_patch(obs, 20)
+        plt.imshow(patch);plt.show(block=False)
+        plt.pause(0.1)
         print(f"step {step} reward {rew} done {done}")
         step += 1
         if done:
             break
 
 
-    tc=TinyController(3)
-    t=torch.rand(bs, 3, 64, 64)
-     

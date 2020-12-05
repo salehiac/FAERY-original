@@ -1,4 +1,20 @@
-from abc import ABC, abstractmethod
+# Novelty Search Library.
+# Copyright (C) 2020 Sorbonne University
+# Maintainer: Achkan Salehi (salehi@isir.upmc.fr)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import copy
 import time
 import numpy as np
@@ -13,15 +29,10 @@ from scoop import futures
 from termcolor import colored
 import BehaviorDescr
 import MiscUtils
-
-class Problem(ABC):
-    @abstractmethod
-    def __call__(self, agent):
-        pass
-    
+from Problem import Problem
 
 class HardMaze(Problem):
-    def __init__(self, bd_type="generic", max_episodes=500, display=False, assets={}):
+    def __init__(self, bd_type="generic", max_steps=2000, display=False, assets={}):
         """
         bd_type  str      available options are 
                               - generic   based on spatial trajectory, doesn't take orientation into account
@@ -40,7 +51,7 @@ class HardMaze(Problem):
             self.env.enable_display()
             print(colored("Warning: you have set display to True, makes sure that you have launched scoop with -n 1", "magenta",attrs=["bold"]))
 
-        self.max_episodes=max_episodes
+        self.max_steps=max_steps
 
         self.bd_type=bd_type
         if bd_type=="generic":
@@ -57,14 +68,14 @@ class HardMaze(Problem):
     def __call__(self, ag):
         #print("evaluating agent ", ag._idx)
 
-        if hasattr(ag, "eval"):
-            ag.eval()
+        if hasattr(ag, "eval"):#in case of torch agent
+            ag.eval() 
 
         obs=self.env.reset()
         fitness=0
         behavior_info=[] 
         task_solved=False
-        for i in range(self.max_episodes):
+        for i in range(self.max_steps):
             if self.display:
                 self.env.render()
                 time.sleep(0.01)
@@ -136,8 +147,6 @@ class HardMaze(Problem):
                 self.num_saved+=1
 
 
-
-
 if __name__=="__main__":
    
     import Agents
@@ -145,7 +154,7 @@ if __name__=="__main__":
     #test_scoop=False
 
     if test_scoop:
-        hm=HardMaze(bd_type="generic",max_episodes=2000,display=False)
+        hm=HardMaze(bd_type="generic",max_steps=2000,display=False)
         num_agents=100
         random_pop=[Agents.Dummy(in_d=5, out_d=2, out_type="list") for i in range(num_agents)]
         

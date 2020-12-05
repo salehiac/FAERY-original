@@ -1,0 +1,28 @@
+
+Note: doesn't sound like a good idea to have cavefly as an env here, as the main issue with that env is state representation, not novelty search
+      Also, it would make sense to show that learned behaviors descriptors are interesting where there is some information that isn't just captured
+      by the trajectory. In the case of exploratory cavefly, that doens't hold as it is just like the maze.
+
+      other candidates are 
+                   - collectball (this is a good example as it requires not only trajectory but different exploratory vs direct behaviors)
+                           is there a way to interpret learned BDs as "exploratory" etc?
+                   - kuka
+
+
+-̶ ̶a̶d̶d̶ ̶c̶a̶v̶e̶f̶l̶y̶ ̶a̶n̶d̶ ̶a̶ ̶g̶r̶a̶s̶p̶i̶n̶g̶ ̶e̶n̶v̶
+- First things first, finish implementing everything and test everything with hardmaze before doing anything else
+- Add saving configuration to log directory
+- Add resume from given generation
+- Add polynomial mutations instead of gaussian
+- run experiments with default behavior descriptors (hardmaze first)
+- run experiments with other bds
+- run experiments regarding archive-less novelty with two encoders
+- run experiments comparing behavior trees with FC controllers
+- Cleanup by separating abstract classes in their own files
+- Add contributors to headers etc
+- Make sure that you can use gpl when some of the dependencies (e.g. procgen) are under Apache2 (and if using mujoco, it's even worse)
+- make sure problems are imported in ns.py only based on configuration (why import some weird stuff when you need hardmaze only)
+- transfer from bitbucket to github
+- (optional) Add an ipyparallel version
+
+

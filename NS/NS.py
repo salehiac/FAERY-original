@@ -1,3 +1,19 @@
+# Novelty Search Library.
+# Copyright (C) 2020 Sorbonne University
+# Maintainer: Achkan Salehi (salehi@isir.upmc.fr)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 import time
@@ -23,7 +39,6 @@ import tqdm
 import Archives
 import NoveltyEstimators
 import BehaviorDescr
-import Problems
 import Agents
 import MiscUtils
 
@@ -208,10 +223,11 @@ if __name__=="__main__":
 
     # create behavior descriptors and problem
     if config["problem"]["name"]=="hardmaze":
-        max_episodes=config["problem"]["max_episodes"]
+        max_steps=config["problem"]["max_steps"]
         bd_type=config["problem"]["bd_type"]
         assets=config["problem"]["assets"]
-        problem=Problems.HardMaze(bd_type=bd_type,max_episodes=max_episodes, assets=assets)
+        import HardMaze
+        problem=HardMaze.HardMaze(bd_type=bd_type,max_steps=max_steps, assets=assets)
     else:
         raise NotImplementedError("Problem type")
 
