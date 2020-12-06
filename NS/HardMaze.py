@@ -37,7 +37,7 @@ class HardMaze(Problem):
         bd_type  str      available options are 
                               - generic   based on spatial trajectory, doesn't take orientation into account
                               - learned   Encoder based, not implemented yet
-                              - engineerd here, it's a histogram of states 
+                              - engineered here, it's a histogram of states 
 
         assets   list     Either {} or a single list dict with key,val= env_im","absolute path to the maze *pbm". Only used to display behavior descriptors
         """
@@ -58,6 +58,12 @@ class HardMaze(Problem):
             self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
             self.dist_thresh=1 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
                                #in order for x to be considerd novel
+        elif bd_type=="learned":
+            self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
+        elif bd_type=="engineered":
+            raise NotImplementedError("not implemented- engineered bds")
+        else:
+            raise Exception("Wrong bd type")
         
         self.goal_radius=42# Note that the diameter returned by self.env.goal.get_diam() is 7.0 by default (which would be 21.0 in the 200x200 image). I'm doubling that for faster experiments.
 
@@ -78,7 +84,13 @@ class HardMaze(Problem):
 
         obs=self.env.reset()
         fitness=0
-        behavior_info=[] 
+        if self.bd_type=="generic":
+            behavior_info=[] 
+        elif self.bd_type=="learned":
+            behavior_info=self.maze_im.copy()
+        elif self.bd_type=="engineered":
+            pass
+
         task_solved=False
         for i in range(self.max_steps):
             if self.display:
@@ -91,8 +103,15 @@ class HardMaze(Problem):
             fitness+=reward
             if self.bd_type!="learned":
                 behavior_info.append(info["robot_pos"])
-            else:
-                behavior_info.append(obs)
+            elif self.bd_type=="learned":
+                z=info["robot_pos"][:2]
+                #scale to im size
+                real_w=self.env.map.get_real_w()
+                real_h=self.env.map.get_real_h()
+                z[0]=(z[0]/real_w)*behavior_info.shape[1]
+                z[1]=(z[1]/real_h)*behavior_info.shape[0]
+        
+                behavior_info=cv2.circle(behavior_info, (int(z[0]),int(z[1])) , 2, (255,0,0), thickness=-1)
             
             #check if task solved
             if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.goal_radius:
@@ -102,7 +121,8 @@ class HardMaze(Problem):
 
             if ended:
                 break
-        
+       
+        pdb.set_trace()
         bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) if self.bd_type!="learned" else None
         return fitness, bd, task_solved
 

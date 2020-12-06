@@ -18,10 +18,14 @@
 
 from abc import ABC, abstractmethod
 import numpy as np
+import torch
 
 class BehaviorDescr:
-    @abstractmethod
-    def distance(self, other):
+    """
+    Mapping between meta-data and behavior space. Also specifies a metric.
+    """
+    @staticmethod
+    def distance(a, b):
         pass
     @abstractmethod
     def extract_behavior(self, x):
@@ -37,29 +41,39 @@ class BehaviorDescr:
 
 class GenericBD(BehaviorDescr):
     def __init__(self, dims, num):
-        self.vec=np.zeros([num, dims])
+        """
+        dims int  number of dims of behavior descriptor space
+        num  int  number of points to sample from trajectory
+        """
         self.dims=dims
         self.num=num
 
-    def distance(self, other):
-        return np.linalg.norm(self.v-other.v)
+    def distance(a, b):
+        return np.linalg.norm(a-b)
 
     def extract_behavior(self, trajectory):
         """
         samples self.num trajectory points uniformly, only from the self.dims first dimensions of the trajectory
-        trajectory np.array of shape M*dims such that dims>=self.vec.shape[1]
+        trajectory np.array of shape M*dims such that dims>=self.dims
         """
-        assert trajectory.shape[1]>=self.vec.shape[1], "not enough dims to extract"
+        vec=np.zeros([self.num, self.dims])
+        assert trajectory.shape[1]>=vec.shape[1], "not enough dims to extract"
         M=trajectory.shape[0]
-        N=self.vec.shape[0]
+        N=vec.shape[0]
         inds=list(range(M-1,-1,-M//N))
-        self.vec=trajectory[inds,:self.dims]
+        vec=trajectory[inds,:self.dims]
 
-        return self.vec
+        return vec
 
     def get_bd_dims(self):
 
         return self.dims*self.num
+
+class AdatptativeBehavior(BehaviorDescr):
+
+    def __init__(self):
+        pass
+
 
 
 

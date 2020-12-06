@@ -95,18 +95,18 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         return novs.tolist()
 
 
-class LearnedNovelty(NoveltyEstimator):
+class LearnedNovelty1d(NoveltyEstimator):
 
     def __init__(self, in_dim, emb_dim, batch_sz=128):
 
-        self.frozen=MiscUtils.SmallEncoder(in_dim,
+        self.frozen=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
             num_hidden=5,
             non_lin="tanh",
             use_bn=False)
         self.frozen.eval()
         
-        self.learnt=MiscUtils.SmallEncoder(in_dim,
+        self.learnt=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
             num_hidden=5,
             non_lin="tanh",

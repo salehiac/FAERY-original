@@ -63,7 +63,7 @@ class NoveltySearch:
             map_type="scoop",
             logs_root="/tmp/ns_log/"):
         """
-        archive               Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty
+        archive               Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
         nov_estimator         NoveltyEstimator  object implementing the NoveltyEstimator interface. 
         problem               Problem           object that provides 
                                                      - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
@@ -250,7 +250,7 @@ if __name__=="__main__":
         elif config["novelty_estimator"]["type"]=="learned":
             bd_dims=problem.get_bd_dims()
             embedding_dims=bd_dims
-            nov_estimator=NoveltyEstimators.LearnedNovelty(in_dim=bd_dims, emb_dim=embedding_dims)
+            nov_estimator=NoveltyEstimators.LearnedNovelty1d(in_dim=bd_dims, emb_dim=embedding_dims)
             arch=None
 
         #create selector
