@@ -27,6 +27,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import tqdm
+import cv2
 
 def get_current_time_date():
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -107,10 +108,10 @@ class convNxN(torch.nn.Module):
     def __init__(self,
             in_c,#num input channels 
             out_c,#num output channels
-            ks=5, #kernel size
+            ks=3, #kernel size
             stride=1,
             nonlin="relu",
-            padding=2,
+            padding=1,
             bn=True):
 
         super().__init__()
@@ -339,16 +340,18 @@ if __name__=="__main__":
     if TEST_TRAIN_AUTOENCODER_CIFAR10:
         N=32#cifar10 images are 32x32
         s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=8)
-        train_encoder_on_cifar10(s2,train_shuffle=True,iters=1500)#for cifar 10 a single epoch is enough
+        train_encoder_on_cifar10(s2,train_shuffle=True,iters=1500)
 
     if TEST_TRAINED_AUTOENCODER_CIFAR10:
         import torchvision
         import torchvision.transforms as transforms
 
+        #out_d=torch.nn.functional.interpolate(out_d,(x.shape[2],x.shape[3]))
 
-        path="/home/achkan/Desktop/tmp_desktop/autoencoder_saves/autoencoder_40"
+        #path="/home/achkan/Desktop/tmp_desktop/autoencoder_saves/autoencoder_40"
+        path="../models/cifar10/autoencoder_emb_sz_32_iter_80_conv3x3"
         #path="/tmp/autoencoder_1"
-        ae=load_autoencoder(path, w=32, h=32, in_c=3, emb_sz=8)
+        ae=load_autoencoder(path, w=32, h=32, in_c=3, emb_sz=32)
         #ae=torch.load(path)
         
         transform = transforms.Compose(
@@ -361,7 +364,7 @@ if __name__=="__main__":
                                          shuffle=True, num_workers=1)
         test_iter=iter(testloader)
 
-        n_tests=10
+        n_tests=3
         ae.eval()
         ae.cuda()
         with torch.no_grad():
@@ -375,6 +378,18 @@ if __name__=="__main__":
                 result=np.concatenate([in_data,out],1)
                 plt.imshow(result)
                 plt.show()
+
+            #try with hardmaze
+            im=cv2.imread("/tmp/f1.png").astype("float")
+            im/=255; im-=0.5; im*=2;
+            im_t=torch.Tensor(im).transpose(1,2).transpose(0,1).unsqueeze(0).cuda()
+            im_t=torch.nn.functional.interpolate(im_t,(32,32),mode="bilinear")
+            im_t_np=im_t.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+            plt.imshow(im_t_np);plt.show()
+            _,zz,loss=ae(im_t)
+            zz_np=zz.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+            print("loss=",loss)
+            plt.imshow(zz_np);plt.show()
 
 
         
