@@ -70,14 +70,9 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         self.kdt_bds=np.concatenate([self.archive_bds,self.pop_bds],0) if len(self.archive_bds) else self.pop_bds
         self.kdt = KDTree(self.kdt_bds, leaf_size=20, metric='euclidean')
 
-    def __call__(self, dist_thresh):
+    def __call__(self):
         """
         estimate novelty of entire current population w.r.t istelf+archive
-
-        dist_thresh   float   if an individual is closer to its nearest neightbour in archive+pop than dist_thresh, then 
-                              it wont be added to the archive (without that condition you might add the same point numerous 
-                              times to the archive, as while its distance to its nearset neighbour is ~0, it couls be far from all of
-                              its second, third, .... neighbours.
 
         returns novelties as unsorted list
         """
@@ -124,7 +119,7 @@ class LearnedNovelty1d(NoveltyEstimator):
         self.pop_bds=[x._behavior_descr for x in self.pop]
         self.pop_bds=np.concatenate(self.pop_bds, 0)
     
-    def __call__(self, dist_tresh):
+    def __call__(self):
 
         #self.pop_bds is of size NxD with D the dimensions of the behavior space
       

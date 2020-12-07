@@ -31,6 +31,10 @@ import BehaviorDescr
 import MiscUtils
 from Problem import Problem
 
+from threading import Thread, Lock
+
+_mutex = Lock()
+
 class HardMaze(Problem):
     def __init__(self, bd_type="generic", max_steps=2000, display=False, assets={}):
         """
@@ -58,8 +62,9 @@ class HardMaze(Problem):
             self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
             self.dist_thresh=1 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
                                #in order for x to be considerd novel
-        elif bd_type=="learned":
-            self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
+        elif bd_type=="learned_frozen":
+            self.bd_extractor=BehaviorDescr.FrozenEncoderBased()
+            self.dist_thresh=1
         elif bd_type=="engineered":
             raise NotImplementedError("not implemented- engineered bds")
         else:
@@ -69,6 +74,8 @@ class HardMaze(Problem):
 
         self.maze_im=cv2.imread(assets["env_im"]) if len(assets) else None
         self.num_saved=0
+
+        self.best_dist_to_goal=10000000
 
     def close(self):
         self.env.close()
@@ -86,7 +93,7 @@ class HardMaze(Problem):
         fitness=0
         if self.bd_type=="generic":
             behavior_info=[] 
-        elif self.bd_type=="learned":
+        elif self.bd_type=="learned" or self.bd_type=="learned_frozen":
             behavior_info=self.maze_im.copy()
         elif self.bd_type=="engineered":
             pass
@@ -101,9 +108,9 @@ class HardMaze(Problem):
             action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
             obs, reward, ended, info=self.env.step(action)
             fitness+=reward
-            if self.bd_type!="learned":
+            if self.bd_type=="generic":
                 behavior_info.append(info["robot_pos"])
-            elif self.bd_type=="learned":
+            elif self.bd_type=="learned" or self.bd_type=="learned_frozen":
                 z=info["robot_pos"][:2]
                 #scale to im size
                 real_w=self.env.map.get_real_w()
@@ -114,16 +121,30 @@ class HardMaze(Problem):
                 behavior_info=cv2.circle(behavior_info, (int(z[0]),int(z[1])) , 2, (255,0,0), thickness=-1)
             
             #check if task solved
-            if np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()])) < self.goal_radius:
+            dist_to_goal=np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()]))
+            if dist_to_goal < self.goal_radius:
                 task_solved=True
                 ended=True
                 break#otherwise the robot might move away from the goal
+           
+            #_mutex.acquire()
+            #if dist_to_goal< self.best_dist_to_goal:
+            #    self.best_dist_to_goal=dist_to_goal
+            #    print("************",dist_to_goal)
+            #_mutex.release()
+
 
             if ended:
                 break
-       
-        pdb.set_trace()
-        bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) if self.bd_type!="learned" else None
+     
+        bd=None
+        if isinstance(self.bd_extractor, BehaviorDescr.GenericBD):
+            bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) 
+        elif self.bd_type=="learned" or self.bd_type=="learned_frozen":
+            bd=self.bd_extractor.extract_behavior(behavior_info)
+            if task_solved:
+                cv2.imwrite("/tmp/solution.png", behavior_info)
+        #pdb.set_trace()
         return fitness, bd, task_solved
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):

@@ -18,6 +18,7 @@
 
 from abc import ABC, abstractmethod
 import numpy as np
+import MiscUtils
 import torch
 
 class BehaviorDescr:
@@ -48,6 +49,7 @@ class GenericBD(BehaviorDescr):
         self.dims=dims
         self.num=num
 
+    @staticmethod
     def distance(a, b):
         return np.linalg.norm(a-b)
 
@@ -68,6 +70,32 @@ class GenericBD(BehaviorDescr):
     def get_bd_dims(self):
 
         return self.dims*self.num
+
+class FrozenEncoderBased(BehaviorDescr):
+    def __init__(self):
+        super().__init__()
+        self.dims=8
+        self.autoencoder=MiscUtils.load_autoencoder("../models/linnaeus/autoencoder_30", w=64, h=64, in_c=3, emb_sz=8)
+    
+    @staticmethod
+    def distance(a,b):
+        return np.linalg.norm(a-b)
+
+    def extract_behavior(self, x):
+        x=x.astype("float")
+        x/=255; x-=0.5; x*=2;
+        with torch.no_grad():
+            self.autoencoder.eval()
+            x=torch.Tensor(x).transpose(2,1).transpose(1,0).unsqueeze(0)
+            x=torch.nn.functional.interpolate(x,(64,64))#,mode="bilinear",algin_corners=False)
+            code=self.autoencoder.forward(x, forward_decoder=False)
+        
+            return code.cpu().detach().numpy()
+    
+    def get_bd_dims(self):
+        return self.dims
+
+
 
 class AdatptativeBehavior(BehaviorDescr):
 

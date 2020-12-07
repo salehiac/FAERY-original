@@ -193,6 +193,8 @@ class SmallAutoEncoder2d(torch.nn.Module):
                     out_d=non_lin(m(out_d,output_size=[bs, cs, hs*2, ws*2]))
                 else:
                     out_d=non_lin(m(out_d))
+        else:
+            return code
 
         out_d=torch.tanh(out_d)#because inputs are normalized in [-1,1]
         diff=out_d-x

@@ -167,7 +167,7 @@ class NoveltySearch:
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
-            novs=self.nov_estimator(problem.dist_thresh)#computes novelty of all population
+            novs=self.nov_estimator()#computes novelty of all population
             for ag_i in range(len(pop)):
                 pop[ag_i]._nov=novs[ag_i]
             
