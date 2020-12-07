@@ -18,6 +18,7 @@
 
 import subprocess
 import os
+import sys
 from datetime import datetime
 import functools
 import pdb
@@ -28,6 +29,9 @@ import matplotlib.pyplot as plt
 import torch
 import tqdm
 import cv2
+
+sys.path.append("../")
+from Data import LinnaeusLoader
 
 def get_current_time_date():
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -134,7 +138,7 @@ class convNxN(torch.nn.Module):
 
 class SmallAutoEncoder2d(torch.nn.Module):
 
-    def __init__(self, in_h, in_w, in_c=3, emb_sz=64, with_decoder=True):
+    def __init__(self, in_h, in_w, in_c=3, emb_sz=8, with_decoder=True):
 
         super().__init__()
 
@@ -181,12 +185,14 @@ class SmallAutoEncoder2d(torch.nn.Module):
             out_d=torch.relu(self.mdls_d[0](code))
             out_d=out_d.reshape(bs, self.n_f, self.r_h, self.r_w)
             out_d=out
-            for m in self.mdls_d[1:]:
+            for m_i in range(1,len(self.mdls_d)):
+                m=self.mdls_d[m_i]
+                non_lin=torch.relu if m_i<len(self.mdls_d)-1 else identity
                 if isinstance(m,torch.nn.ConvTranspose2d):
                     _, cs, hs, ws = out_d.shape
-                    out_d=torch.relu(m(out_d,output_size=[bs, cs, hs*2, ws*2]))
+                    out_d=non_lin(m(out_d,output_size=[bs, cs, hs*2, ws*2]))
                 else:
-                    out_d=torch.relu(m(out_d))
+                    out_d=non_lin(m(out_d))
 
         out_d=torch.tanh(out_d)#because inputs are normalized in [-1,1]
         diff=out_d-x
@@ -194,30 +200,61 @@ class SmallAutoEncoder2d(torch.nn.Module):
 
         return code, out_d, loss
 
-def train_encoder_on_cifar10(autoencoder, train_shuffle=False, iters=500):
+def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus"):
+    """
+    dataset   can either be cifar10 or linnaeus
+    """
     import torchvision
     import torchvision.transforms as transforms
 
-    transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
     batch_sz=128
-    
-    trainset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=True,
-                                        download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_sz,
-                                          shuffle=train_shuffle, num_workers=1)
-    
-    testset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=False,
-                                       download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_sz,
-                                         shuffle=False, num_workers=1)
+   
+    if dataset=="cifar10":
+        transform = transforms.Compose(
+                [transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+        trainset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=True,
+                                            download=True, transform=transform)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_sz,
+                                              shuffle=train_shuffle, num_workers=1)
+        
+        testset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=False,
+                                           download=True, transform=transform)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_sz,
+                                             shuffle=False, num_workers=1)
+        
+        LR=1e-3
+        optimizer=torch.optim.Adam(autoencoder.parameters(), lr=LR)
 
 
-    LR=1e-3
-    #optimizer=torch.optim.SGD(autoencoder.parameters(), lr=LR, momentum=0.9)
-    optimizer=torch.optim.Adam(autoencoder.parameters(), lr=LR)
+    if dataset=="linnaeus":
+       
+        degrees=50
+       
+        transform_train = transforms.Compose(
+                [transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    torchvision.transforms.ToPILImage(),
+                    torchvision.transforms.RandomAffine(degrees, translate=(0,1.0), scale=None, shear=3, resample=0, fillcolor=0),
+                    transforms.ToTensor()])
+                
+        transform_test = transforms.Compose(
+                [transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        
+        
+        trainset=LinnaeusLoader.Linnaeus("../../linnaeus/",train=True,transform=transform_train)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_sz,
+                                              shuffle=train_shuffle, num_workers=1)
+        
+        testset=LinnaeusLoader.Linnaeus("../../linnaeus/",train=False,transform=transform_test)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_sz,
+                                             shuffle=False, num_workers=1)
+        
+        LR=1e-3
+        #optimizer=torch.optim.SGD(autoencoder.parameters(), lr=LR, momentum=0.9)
+        optimizer=torch.optim.Adam(autoencoder.parameters(), lr=LR)
 
     autoencoder.cuda()
 
@@ -237,15 +274,19 @@ def train_encoder_on_cifar10(autoencoder, train_shuffle=False, iters=500):
         train_iter=iter(trainloader)
         for batch_i in tqdm_train:
             data = next(train_iter)
+            #pdb.set_trace()
             #if batch_i>2:
             #    break
-            inputs, _ = data #second input is labels, I don't care about them
+            if dataset=="cifar10":
+                inputs, _ = data #second input is labels, I don't care about them
+            else:
+                inputs = data #second input is labels, I don't care about them
             inputs=inputs.cuda()
 
             optimizer.zero_grad()
             _, out_d, loss = autoencoder(inputs)
 
-            if 0:#batch_i%300==0:#epoch%50==0:
+            if 0:#batch_i%30==0:#epoch%50==0:
                 for i in range(1):
                     in_data=inputs[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                     out_data=out_d[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
@@ -277,13 +318,17 @@ def train_encoder_on_cifar10(autoencoder, train_shuffle=False, iters=500):
                 data=next(test_iter)
                 #if batch_i>2:
                 #    break
-                inputs, _ = data #second input is labels, I don't care about them
+                if dataset=="cifar10":
+                    inputs, _ = data #second input is labels, I don't care about them
+                else:
+                    inputs = data #second input is labels, I don't care about them
+
                 inputs=inputs.cuda()
 
-                _, out_data , loss_v = autoencoder(inputs)
+                _, out_d, loss_v = autoencoder(inputs)
                 epc_val_h.append(loss_v.item())
                 
-                if 0:#batch_i%40==0:#epoch%50==0:
+                if 0:#batch_i%4==0:#epoch%50==0:
                     for i in range(1):
                         in_data=inputs[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                         out_data=out_d[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
@@ -307,7 +352,10 @@ def train_encoder_on_cifar10(autoencoder, train_shuffle=False, iters=500):
         plt.savefig("/tmp/losses_"+str(epoch)+".png")
         plt.close()
 
-        torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves/autoencoder_"+str(epoch))
+        if dataset=="cifar10":
+            torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves_cifar10/autoencoder_"+str(epoch))
+        else:
+            torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves_linnaeus/autoencoder_"+str(epoch))
         #torch.save(autoencoder, "/tmp/autoencoder_"+str(epoch))
 
 def load_autoencoder(path, w, h, in_c, emb_sz):
@@ -321,8 +369,18 @@ if __name__=="__main__":
     TEST_CREATE_AUENCODER=False
     TEST_TRAIN_AUTOENCODER_CIFAR10=False
     #TEST_TRAIN_AUTOENCODER_CIFAR10=True
+
+    TEST_TRAIN_AUTOENCODER_LINNAEUS=False
+    #TEST_TRAIN_AUTOENCODER_LINNAEUS=True
+    
     #TEST_TRAINED_AUTOENCODER_CIFAR10=False
     TEST_TRAINED_AUTOENCODER_CIFAR10=True
+
+    TEST_TRAINED_AUTOENCODER_LINNAEUS=False
+    #TEST_TRAINED_AUTOENCODER_LINNAEUS=True
+
+    #TEST_AUTOENCODER_WITH_MAZE=False
+    TEST_AUTOENCODER_WITH_MAZE=True
 
     if TEST_CREAT_DIR:
         _=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=True)
@@ -340,19 +398,21 @@ if __name__=="__main__":
     if TEST_TRAIN_AUTOENCODER_CIFAR10:
         N=32#cifar10 images are 32x32
         s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=8)
-        train_encoder_on_cifar10(s2,train_shuffle=True,iters=1500)
+        train_encoder(s2,train_shuffle=True,iters=1500,dataset="cifar10")
+    
+    if TEST_TRAIN_AUTOENCODER_LINNAEUS:
+        N=64#linnaeus images are 64x64
+        s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=8)
+        train_encoder(s2,train_shuffle=True,iters=1500,dataset="linnaeus")
 
     if TEST_TRAINED_AUTOENCODER_CIFAR10:
         import torchvision
         import torchvision.transforms as transforms
 
-        #out_d=torch.nn.functional.interpolate(out_d,(x.shape[2],x.shape[3]))
 
-        #path="/home/achkan/Desktop/tmp_desktop/autoencoder_saves/autoencoder_40"
-        path="../models/cifar10/autoencoder_emb_sz_32_iter_80_conv3x3"
-        #path="/tmp/autoencoder_1"
-        ae=load_autoencoder(path, w=32, h=32, in_c=3, emb_sz=32)
-        #ae=torch.load(path)
+        N=32;
+        path="../models/cifar10/autoencoder_80"
+        ae=load_autoencoder(path, w=N, h=N, in_c=3, emb_sz=8)
         
         transform = transforms.Compose(
                 [transforms.ToTensor(),
@@ -378,17 +438,69 @@ if __name__=="__main__":
                 result=np.concatenate([in_data,out],1)
                 plt.imshow(result)
                 plt.show()
+    
+    if TEST_TRAINED_AUTOENCODER_LINNAEUS:
+        import torchvision
+        import torchvision.transforms as transforms
+
+        N=64;
+        path="../models/linnaeus/autoencoder_30"
+        ae=load_autoencoder(path, w=N, h=N, in_c=3, emb_sz=8)
+        
+        transform_test = transforms.Compose(
+                [transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        
+
+        testset=LinnaeusLoader.Linnaeus("../../linnaeus/",train=False,transform=transform_test)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+                shuffle=False, num_workers=1)
+
+
+        test_iter=iter(testloader)
+
+        n_tests=3
+        ae.eval()
+        ae.cuda()
+        with torch.no_grad():
+            for i in range(n_tests):
+                im = next(test_iter)
+                im=im.cuda()
+                _, out, loss =ae(im)
+                print("loss_val==",loss.item())
+                in_data=im[0,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                out=out[0,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                result=np.concatenate([in_data,out],1)
+                plt.imshow(result)
+                plt.show()
+    
+
+    
+    if TEST_AUTOENCODER_WITH_MAZE:
+       
+        N=32; path="../models/cifar10/autoencoder_80"
+        #N=64; path="../models/linnaeus/autoencoder_30"
+
+        ae=load_autoencoder(path, w=N, h=N, in_c=3, emb_sz=8)
+       
+        ae.eval()
+        ae.cuda()
+        
+        with torch.no_grad():
 
             #try with hardmaze
-            im=cv2.imread("/tmp/f1.png").astype("float")
+            im=cv2.imread("../maze_b.png").astype("float")
+            #b,g,r=cv2.split(im)
+            #im=cv2.merge([r,g,b])
             im/=255; im-=0.5; im*=2;
             im_t=torch.Tensor(im).transpose(1,2).transpose(0,1).unsqueeze(0).cuda()
-            im_t=torch.nn.functional.interpolate(im_t,(32,32),mode="bilinear")
-            im_t_np=im_t.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+            im_t_s=torch.nn.functional.interpolate(im_t,(N,N))#,mode="bilinear",algin_corners=False)
+            im_t_np=im_t_s.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
             plt.imshow(im_t_np);plt.show()
-            _,zz,loss=ae(im_t)
+            _,zz,loss=ae(im_t_s)
             zz_np=zz.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
             print("loss=",loss)
+            zz_np-=zz_np.min();zz_np/=zz_np.max();
             plt.imshow(zz_np);plt.show()
 
 
