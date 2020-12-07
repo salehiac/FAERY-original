@@ -21,6 +21,7 @@ import os
 from datetime import datetime
 import functools
 import pdb
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -106,9 +107,10 @@ class convNxN(torch.nn.Module):
     def __init__(self,
             in_c,#num input channels 
             out_c,#num output channels
-            ks=3, #kernel size
+            ks=5, #kernel size
             stride=1,
             nonlin="relu",
+            padding=2,
             bn=True):
 
         super().__init__()
@@ -117,7 +119,7 @@ class convNxN(torch.nn.Module):
                 out_c,
                 kernel_size=ks,
                 stride=stride,
-                padding=1,
+                padding=padding,
                 bias=True)
 
 
@@ -135,39 +137,35 @@ class SmallAutoEncoder2d(torch.nn.Module):
 
         super().__init__()
 
-        num_divs_by_two=3
+        logh=np.log2(in_h)
+        logw=np.log2(in_w)
+        if int(logw)!=logw or int(logh)!=logh:
+            #that choice was made to avoid having to do additional upsamplings with interpolocate
+            #(because all possible output sizes can't easily be obtaind with ConvTranspose2d) and additional 
+            #convolutions to correct that
+            raise Exception("spatial dims should be powers of two")
+
+        num_divs_by_two=1
         self.r_h=in_h//(2**num_divs_by_two)
         self.r_w=in_w//(2**num_divs_by_two)
 
         self.size_lst=[(in_h//(2**x), in_w//(2**x)) for x in range(1,num_divs_by_two+1)]
 
+
+        self.n_f=16
+        #use larger strides instead of maxpooling
         self.mdls_e=torch.nn.ModuleList([
-            convNxN(in_c, 16),
-            torch.nn.MaxPool2d(2), 
-            convNxN(16, 48),
-            convNxN(48, 64),
-            torch.nn.MaxPool2d(2),  
-            convNxN(64, 32),
-            torch.nn.MaxPool2d(2), 
-            convNxN(32, 16 ),
-            torch.nn.Linear(16*self.r_h*self.r_w, emb_sz)
+            convNxN(in_c, self.n_f,stride=2),
+            torch.nn.Linear(self.n_f*self.r_h*self.r_w, emb_sz)
             ])
-     
+
         self.mdls_d=None
         if with_decoder:
             self.mdls_d=torch.nn.ModuleList([
-                torch.nn.Linear(emb_sz, 16*self.r_h*self.r_w),
-                convNxN(16, 32),
-                torch.nn.ConvTranspose2d(32,32, 3, stride=2, padding=1),
-                convNxN(32, 64),
-                torch.nn.ConvTranspose2d(64, 64, 3, stride=2, padding=1),
-                convNxN(64, 48),
-                convNxN(48, 16),
-                torch.nn.ConvTranspose2d(16, 16, 3, stride=2, padding=1),
-                convNxN(16, 16),
+                torch.nn.Linear(emb_sz, self.n_f*self.r_h*self.r_w),
+                torch.nn.ConvTranspose2d(self.n_f, 3, 3, stride=2, padding=1),
                 ])
-            
-            self.last=convNxN(16, in_c, nonlin="", bn=False)#to correct after the last upsampling
+
     
 
     def forward(self, x, forward_decoder=True):
@@ -179,23 +177,23 @@ class SmallAutoEncoder2d(torch.nn.Module):
         code=self.mdls_e[-1](out.view(bs, -1))
         out_d=None
         if self.mdls_d is not None and forward_decoder:
-            out_d=self.mdls_d[0](code)
-            out_d=out_d.reshape(bs, 16, self.r_h, self.r_w)
+            out_d=torch.relu(self.mdls_d[0](code))
+            out_d=out_d.reshape(bs, self.n_f, self.r_h, self.r_w)
+            out_d=out
             for m in self.mdls_d[1:]:
                 if isinstance(m,torch.nn.ConvTranspose2d):
                     _, cs, hs, ws = out_d.shape
-                    out_d=m(out_d,output_size=[bs, cs, hs*2, ws*2])
+                    out_d=torch.relu(m(out_d,output_size=[bs, cs, hs*2, ws*2]))
                 else:
-                    out_d=m(out_d)
+                    out_d=torch.relu(m(out_d))
 
-        #print(out_d.shape)
-        out_d=torch.nn.functional.interpolate(out_d,(x.shape[2],x.shape[3]))
-        out_d=self.last(out_d)
-        loss=(out_d-x).norm()/x.shape[0]
+        out_d=torch.tanh(out_d)#because inputs are normalized in [-1,1]
+        diff=out_d-x
+        loss=(diff.norm()**2)/(x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3])
 
         return code, out_d, loss
 
-def train_encoder_on_cifar10(encoder, train_shuffle=False):
+def train_encoder_on_cifar10(autoencoder, train_shuffle=False, iters=500):
     import torchvision
     import torchvision.transforms as transforms
 
@@ -203,102 +201,133 @@ def train_encoder_on_cifar10(encoder, train_shuffle=False):
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    batch_sz=1
+    batch_sz=128
     
     trainset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=True,
                                         download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_sz,
-                                          shuffle=train_shuffle, num_workers=2)
+                                          shuffle=train_shuffle, num_workers=1)
     
     testset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=False,
                                        download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_sz,
-                                         shuffle=False, num_workers=2)
+                                         shuffle=False, num_workers=1)
 
 
-    LR=1e-4
-    optimizer=torch.optim.SGD(encoder.parameters(), lr=LR, momentum=0.9)
-    #optimizer=torch.optim.Adam(encoder.parameters(), lr=LR)
+    LR=1e-3
+    #optimizer=torch.optim.SGD(autoencoder.parameters(), lr=LR, momentum=0.9)
+    optimizer=torch.optim.Adam(autoencoder.parameters(), lr=LR)
 
-    encoder.cuda()
+    autoencoder.cuda()
 
-    iters=300
-    tqdm_gen = tqdm.trange(iters, desc='', leave=True)
            
     loss_hist=[]
     loss_hist_val=[]
-    for epoch in tqdm_gen:  # loop over the dataset multiple times
+    for epoch in range(iters):  # loop over the dataset multiple times
 
         if epoch==100:
             LR/=2
             for param_group in optimizer.param_groups:
                 param_group['lr'] = LR
     
-        encoder.train()
+        autoencoder.train()
         epc_loss_h=[]
-        for batch_i, data in enumerate(trainloader, 0):
-            if batch_i>2:
-                break
+        tqdm_train = tqdm.trange(len(trainloader), desc='', leave=True)
+        train_iter=iter(trainloader)
+        for batch_i in tqdm_train:
+            data = next(train_iter)
+            #if batch_i>2:
+            #    break
             inputs, _ = data #second input is labels, I don't care about them
             inputs=inputs.cuda()
 
-            #pdb.set_trace()
             optimizer.zero_grad()
-            _, out_d, loss = encoder(inputs)
+            _, out_d, loss = autoencoder(inputs)
 
-            if epoch%50==0:
+            if 0:#batch_i%300==0:#epoch%50==0:
                 for i in range(1):
                     in_data=inputs[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                     out_data=out_d[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                    #pdb.set_trace()
                     joint=np.concatenate([in_data,out_data],1)
-                    plt.imshow(joint)
-                    plt.show()
+                    with warnings.catch_warnings():
+                        plt.imshow(joint)
+                        plt.title("train")
+                        plt.show()
 
             loss.backward()
             optimizer.step()
 
             epc_loss_h.append(loss.item())
+            
+            tqdm_train.set_description(f"epoch {epoch}/{iters}, train_loss={sum(epc_loss_h)/len(epc_loss_h)}, LR={LR}")
+            tqdm_train.refresh()
+
+
         
         loss_hist.append(sum(epc_loss_h)/len(epc_loss_h))
       
-        encoder.eval()
+        autoencoder.eval()
         epc_val_h=[]
         with torch.no_grad():
-            for batch_i, data in enumerate(testloader, 0):
-                if batch_i>2:
-                    break
+            tqdm_val = tqdm.trange(len(testloader), desc='', leave=True)
+            test_iter=iter(testloader)
+            for batch_i in tqdm_val:
+                data=next(test_iter)
+                #if batch_i>2:
+                #    break
                 inputs, _ = data #second input is labels, I don't care about them
                 inputs=inputs.cuda()
 
-                _, _, loss_v = encoder(inputs)
+                _, out_data , loss_v = autoencoder(inputs)
                 epc_val_h.append(loss_v.item())
+                
+                if 0:#batch_i%40==0:#epoch%50==0:
+                    for i in range(1):
+                        in_data=inputs[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                        out_data=out_d[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                        joint=np.concatenate([in_data,out_data],1)
+                        with warnings.catch_warnings():
+                            plt.imshow(joint)
+                            plt.title("test")
+                            plt.show()
+
+
+               
+                tqdm_val.set_description(f"epoch {epoch}/{iters}, val_loss={sum(epc_val_h)/len(epc_val_h)}, LR={LR}")
+                tqdm_val.refresh()
                 
             loss_hist_val.append(sum(epc_val_h)/len(epc_val_h))
  
-        tqdm_gen.set_description(f"epoch {epoch}/{iters}, train_loss={loss_hist[-1]}, val_loss={epc_val_h[-1]}, LR={LR}")
-        tqdm_gen.refresh()
+        _=plt.figure()
+        plt.plot(loss_hist,"r",label="train")
+        plt.plot(loss_hist_val,"b",label="test")
+        plt.legend(fontsize=8)
+        plt.savefig("/tmp/losses_"+str(epoch)+".png")
+        plt.close()
 
-        #_=plt.figure()
-        #plt.plot(loss_hist,"r",label="train")
-        #plt.plot(loss_hist_val,"b",label="test")
-        #plt.legend(fontsize=8)
-        #plt.savefig("/tmp/losses_"+str(epoch)+".png")
-        
-        
+        torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves/autoencoder_"+str(epoch))
+        #torch.save(autoencoder, "/tmp/autoencoder_"+str(epoch))
 
-
-        
-
-
-
+def load_autoencoder(path, w, h, in_c, emb_sz):
+    the_model=SmallAutoEncoder2d(in_h=h, in_w=w, in_c=in_c, emb_sz=emb_sz)
+    the_model.load_state_dict(torch.load(path))
+    return the_model
 
 if __name__=="__main__":
 
-    if 0:
+    TEST_CREAT_DIR=False
+    TEST_CREATE_AUENCODER=False
+    TEST_TRAIN_AUTOENCODER_CIFAR10=False
+    #TEST_TRAIN_AUTOENCODER_CIFAR10=True
+    #TEST_TRAINED_AUTOENCODER_CIFAR10=False
+    TEST_TRAINED_AUTOENCODER_CIFAR10=True
+
+    if TEST_CREAT_DIR:
         _=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=True)
         dir_path=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=False)
 
-    if 0:
+    if TEST_CREATE_AUENCODER:
 
         N=32
         s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=64)
@@ -307,9 +336,48 @@ if __name__=="__main__":
             t=torch.rand(2,3,N,N)
             code, reconstruction, loss=s2(t)
             
-    if 1:
+    if TEST_TRAIN_AUTOENCODER_CIFAR10:
         N=32#cifar10 images are 32x32
-        s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=32)
-        train_encoder_on_cifar10(s2)
+        s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=8)
+        train_encoder_on_cifar10(s2,train_shuffle=True,iters=1500)#for cifar 10 a single epoch is enough
+
+    if TEST_TRAINED_AUTOENCODER_CIFAR10:
+        import torchvision
+        import torchvision.transforms as transforms
+
+
+        path="/home/achkan/Desktop/tmp_desktop/autoencoder_saves/autoencoder_40"
+        #path="/tmp/autoencoder_1"
+        ae=load_autoencoder(path, w=32, h=32, in_c=3, emb_sz=8)
+        #ae=torch.load(path)
+        
+        transform = transforms.Compose(
+                [transforms.ToTensor(),
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+        testset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=False,
+                                       download=True, transform=transform)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=1,
+                                         shuffle=True, num_workers=1)
+        test_iter=iter(testloader)
+
+        n_tests=10
+        ae.eval()
+        ae.cuda()
+        with torch.no_grad():
+            for i in range(n_tests):
+                im, _ = next(test_iter)
+                im=im.cuda()
+                _, out, loss =ae(im)
+                print("loss_val==",loss.item())
+                in_data=im[0,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                out=out[0,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
+                result=np.concatenate([in_data,out],1)
+                plt.imshow(result)
+                plt.show()
+
+
+        
+
 
 
