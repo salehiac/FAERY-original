@@ -70,7 +70,7 @@ class colors:
     green=(0,255,0)
     blue=(0,0,255)
 
-_non_lin_dict={"tanh":torch.tanh, "relu": torch.relu, "sigmoid": torch.sigmoid}
+_non_lin_dict={"tanh":torch.tanh, "relu": torch.relu, "sigmoid": torch.sigmoid, "selu": torch.selu, "leaky_relu":torch.nn.functional.leaky_relu}
 def identity(x):
     """
     because pickle and thus scoop don't like lambdas...
@@ -81,12 +81,12 @@ class SmallEncoder1d(torch.nn.Module):
     def __init__(self, 
             in_d,
             out_d,
-            num_hidden=3,
+            num_hidden=5,
             non_lin="relu",
             use_bn=False):
         torch.nn.Module.__init__(self)
 
-        hidden_dim=2*in_d
+        hidden_dim=10*in_d
         self.mds=torch.nn.ModuleList([torch.nn.Linear(in_d, hidden_dim)])
 
         for i in range(num_hidden-1):
@@ -106,6 +106,15 @@ class SmallEncoder1d(torch.nn.Module):
             out=self.bn(self.non_lin(md(out)))
 
         return self.mds[-1](out)
+
+    def weights_to_constant(self,cst):
+        with torch.no_grad():
+            for m in self.mds:
+                m.weight.fill_(cst)
+                m.bias.fill_(cst)
+       
+
+
 
 class convNxN(torch.nn.Module):
 

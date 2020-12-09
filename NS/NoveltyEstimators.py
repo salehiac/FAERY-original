@@ -55,6 +55,7 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
         self.k=k
         self.archive=None
         self.pop=None
+        self.log_dir="/tmp/"
 
     def update(self, pop, archive):
         self.archive=archive
@@ -92,25 +93,30 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
 
 class LearnedNovelty1d(NoveltyEstimator):
 
-    def __init__(self, in_dim, emb_dim, batch_sz=128):
+    def __init__(self, in_dim, emb_dim, batch_sz=128, log_dir="/tmp/"):
 
         self.frozen=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
             num_hidden=5,
-            non_lin="tanh",
-            use_bn=False)
+            non_lin="leaky_relu",
+            use_bn=True)
+        #self.frozen.weights_to_constant(1.0)
         self.frozen.eval()
         
         self.learnt=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
             num_hidden=5,
-            non_lin="tanh",
-            use_bn=False)
+            non_lin="leaky_relu",
+            use_bn=True)
        
         self.optimizer = torch.optim.SGD(self.learnt.parameters(), lr=1e-3)
         self.archive=None
         self.pop=None
         self.batch_sz=batch_sz
+
+        self.epoch=0
+
+        self.log_dir=log_dir
         
     def update(self, pop, archive=None):
         
@@ -122,10 +128,16 @@ class LearnedNovelty1d(NoveltyEstimator):
     def __call__(self):
 
         #self.pop_bds is of size NxD with D the dimensions of the behavior space
-      
+        
+        if self.epoch==0:
+            torch.save(self.frozen.state_dict(),self.log_dir+"/frozen_net.model")
+        
+        torch.save(self.learnt.state_dict(),self.log_dir+f"/learnt_{self.epoch}.model")
+        
         pop_novs=[]
         for i in range(0,self.pop_bds.shape[0],self.batch_sz):
             batch=torch.Tensor(self.pop_bds[i:i+self.batch_sz])
+            #pdb.set_trace()
             with torch.no_grad():
                 e_frozen=self.frozen(batch)
                 self.learnt.eval()
@@ -137,10 +149,14 @@ class LearnedNovelty1d(NoveltyEstimator):
             self.optimizer.zero_grad()
             e_l=self.learnt(batch)
             loss=(e_l-e_frozen).norm()**2
+            print(batch)
+            print("loss==",loss)
             loss.backward()
             self.optimizer.step()
 
         assert len(pop_novs)==self.pop_bds.shape[0], "that shouldn't happen"
+        self.epoch+=1
+
         return pop_novs
 
 if __name__=="__main__":

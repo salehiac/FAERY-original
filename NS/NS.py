@@ -178,7 +178,7 @@ class NoveltySearch:
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
             
             if len(task_solvers):
-                print(colored("[NS info] found task solvers","magenta",attrs=["bold"]))
+                print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))
                 self.task_solvers[it]=task_solvers
                 if stop_on_reaching_task:
                     break
@@ -310,10 +310,12 @@ if __name__=="__main__":
             print("agents evaluated in ", elapsed_time, "seconds (map type == ", map_t,")") # on my DLbox machine with 24 cores, I get 12secs with all of them vs 86secs with a single worker
                                                                                             # (for 200 agents) this is consistent with the 5x to 7x acceleration factor I'd seen before
 
-        MiscUtils.bash_command(["cp", sys.argv[1], ns.log_dir_path+"/config.yaml"])
+        MiscUtils.bash_command(["cp", args.config, ns.log_dir_path+"/config.yaml"])
         
         #do NS
-        final_pop, solutions=ns(iters=config["hyperparams"]["num_generations"],stop_on_reaching_task=True, save_checkpoints=config["save_checkpoints"])
+        stop_on_reaching_task=config["stop_when_task_solved"]
+        nov_estimator.log_dir=ns.log_dir_path
+        final_pop, solutions=ns(iters=config["hyperparams"]["num_generations"],stop_on_reaching_task=stop_on_reaching_task, save_checkpoints=config["save_checkpoints"])
     
     elif len(args.resume):
 
