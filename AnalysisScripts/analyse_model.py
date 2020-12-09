@@ -4,6 +4,7 @@ import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 import scipy.stats as stats
 import scipy.special
@@ -11,8 +12,12 @@ import math
 from collections import namedtuple
 
 
+sys.path.append("../NS/")
 sys.path.append("..")
 from NS import MiscUtils
+#from NS.Agents import Agent
+#from NS import Agents
+
 
 import distrib_utils
 
@@ -114,16 +119,32 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir, bn_was_used
 
     return jensen_shanon_dists
 
+def evolution_of_age_and_parent_child_distances(root_dir):
+
+    ages=[]
+    dists=[]
+    for gen in range(10):
+        fn=root_dir+f"/population_gen_{gen}"
+        with open(fn,"rb") as f:
+            pop=pickle.load(f)
+
+        ages.append(np.mean([gen - indv._created_at_gen for indv in pop])) 
+        dists.append(np.mean([indv._bd_dist_to_parent_bd for indv in pop]))
+
+    return ages, dists
+
 
 if __name__=="__main__":
 
-    WITH_SINGLE_DIRETORY=False
-    WITH_MULTIPLE_DIRECTORIES=True
+    JS_SINGLE_DIRETORY=False
+    JS_MULTIPLE_DIRECTORIES=False
+
+    AGE_AND_DISTANCE_TO_PARENT=True
     
-    if WITH_SINGLE_DIRETORY:
+    if JS_SINGLE_DIRETORY:
         js=see_evolution_of_learned_novelty_distribution_hardmaze(sys.argv[1])
 
-    if WITH_MULTIPLE_DIRECTORIES:
+    if JS_MULTIPLE_DIRECTORIES:
         import os
         
         root="/home/achkan/misc_experiments/guideline_results/hard_maze/learned_novelty_generic_descriptors/uniformity/"
@@ -143,7 +164,27 @@ if __name__=="__main__":
         std_js_evolutions=js_evolutions.std(0)
         MiscUtils.plot_with_std_band(range(len(m_js_evolutions)),m_js_evolutions,std_js_evolutions)
 
+    if AGE_AND_DISTANCE_TO_PARENT:
 
+        root="/tmp/"
+        list_of_experiments=[root+"/NS_log_14079/"]
+
+        age_evolutions=[]
+        bd_dist_to_parent_evolutions=[]
+        for ex in list_of_experiments:
+            age_ev, dist_to_parent_bd = evolution_of_age_and_parent_child_distances(ex)
+            age_evolutions.append(age_ev)
+            bd_dist_to_parent_evolutions.append(dist_to_parent_bd)
+
+        age_evolutions=np.array(age_evolutions)
+        m_age=age_evolutions.mean(0)
+        std_age=age_evolutions.std(0)
+
+        bd_dist_to_parent_evolutions=np.array(bd_dist_to_parent_evolutions)
+        m_bd=bd_dist_to_parent_evolutions.mean(0)
+        std_bd=bd_dist_to_parent_evolutions.std(0)
         
+        MiscUtils.plot_with_std_band(range(len(m_age)),m_age,std_age)
+        MiscUtils.plot_with_std_band(range(len(m_bd)),m_bd,std_bd)
 
 

@@ -1,7 +1,7 @@
 ---
 hyperparams: 
-  population_size: 100
-  offspring_size: 100
+  population_size: 10
+  offspring_size: 10
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
   num_generations: 200
 novelty_estimator:
@@ -31,6 +31,7 @@ visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root: "/tmp/" #directory where NS will create a log directory based on its main pid
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
+compute_parent_child_stats: 1 # 0 or 1
 
   
 

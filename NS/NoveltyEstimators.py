@@ -149,8 +149,8 @@ class LearnedNovelty1d(NoveltyEstimator):
             self.optimizer.zero_grad()
             e_l=self.learnt(batch)
             loss=(e_l-e_frozen).norm()**2
-            print(batch)
-            print("loss==",loss)
+            #print(batch)
+            #print("loss==",loss)
             loss.backward()
             self.optimizer.step()
 

@@ -23,6 +23,7 @@ from datetime import datetime
 import functools
 import pdb
 import warnings
+import pickle
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -75,6 +76,10 @@ def plot_with_std_band(x,y,std,color="red"):
     plt.fill_between(x, y-std, y+std,
                  color=color, alpha=0.2)
     plt.show()
+
+def dump_pickle(fn, obj):
+    with open(fn, "wb") as fl:
+        pickle.dump(obj, fl)
 
 class colors:
     red=(255,0,0)

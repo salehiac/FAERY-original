@@ -61,7 +61,8 @@ class NoveltySearch:
             agent_factory,
             visualise_bds_flag,
             map_type="scoop",
-            logs_root="/tmp/ns_log/"):
+            logs_root="/tmp/ns_log/",
+            compute_parent_child_stats=False):
         """
         archive               Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
         nov_estimator         NoveltyEstimator  object implementing the NoveltyEstimator interface. 
@@ -106,6 +107,7 @@ class NoveltySearch:
         
         initial_pop=[self.agent_factory() for i in range(n_pop)]
         initial_pop=self.generate_new_agents(initial_pop, generation=0)
+
         self._initial_pop=copy.deepcopy(initial_pop)
        
         if n_offspring!=len(initial_pop):
@@ -122,6 +124,8 @@ class NoveltySearch:
 
         #for problems for which it is relevant (e.g. hardmaze), keep track of individuals that have solved the task
         self.task_solvers={}#key,value=generation, list(agents)
+
+        self.compute_parent_child_stats=compute_parent_child_stats
 
 
     def eval_agents(self, agents):
@@ -171,11 +175,22 @@ class NoveltySearch:
             for ag_i in range(len(pop)):
                 pop[ag_i]._nov=novs[ag_i]
             
-            parents=self.selector(individuals=pop, fit_attr="_nov")
+            parents_next=self.selector(individuals=pop, fit_attr="_nov")
+
+            if self.compute_parent_child_stats:
+                for x in parents_next:
+                    if x._bd_dist_to_parent_bd==-1 and x._created_at_gen>0:#otherwise it has already been computed in a previous generation
+                        xp=next((s for s in pop if s._idx== x._parent_idx), None)
+                        if xp is None:
+                            raise Exception("this shouldn't happen")
+                        x._bd_dist_to_parent_bd=problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
+
+            parents=parents_next
             if self.archive is not None:
                 self.archive.update(pop, thresh=problem.dist_thresh)
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+            MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents)
             
             if len(task_solvers):
                 print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))
@@ -188,17 +203,21 @@ class NoveltySearch:
         
         return parents, self.task_solvers
 
+
     def generate_new_agents(self, parents, generation:int):
        
-        parents_as_list=[x.get_flattened_weights() for x in parents]
-        mutated_genotype=[self.mutator(copy.deepcopy(x)) for x in parents_as_list]#deepcopy is because of deap
+        parents_as_list=[(x._idx, x.get_flattened_weights()) for x in parents]
+        mutated_genotype=[(x[0], self.mutator(copy.deepcopy(x[1]))) for x in parents_as_list]#deepcopy is because of deap
 
         mutated_ags=[self.agent_factory() for x in range(self.n_offspring)]
-        kept=random.choices(range(len(mutated_genotype)), k=self.n_offspring)
+        #kept=random.choices(range(len(mutated_genotype)), k=self.n_offspring)
+        kept=random.sample(range(len(mutated_genotype)), k=self.n_offspring)
         for i in range(len(kept)):
-            mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][0])
+            mutated_ags[i]._parent_idx=mutated_genotype[kept[i]][0]
+            mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])
             mutated_ags[i]._created_at_gen=generation
-
+       
+        #pdb.set_trace()
         return mutated_ags
     
     def visualise_bds(self, agents):
@@ -303,7 +322,8 @@ if __name__=="__main__":
                 agent_factory=make_ag,
                 visualise_bds_flag=visualise_bds,
                 map_type=map_t,
-                logs_root="/tmp/")
+                logs_root="/tmp/",
+                compute_parent_child_stats=config["compute_parent_child_stats"])
 
         if 0:
             elapsed_time=ns.eval_agents(population)

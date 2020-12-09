@@ -22,8 +22,6 @@ import torch
 import numpy as np
 from scoop import futures
 
-import MiscUtils
-
 
 class Agent(ABC):
     _num_instances=0#not threadsafe, create agents only in main thread
@@ -47,6 +45,8 @@ class Agent(ABC):
 
         self._solved_task=False
         self._created_at_gen=-1 #to compute age
+        self._parent_idx=-1#hacky way of computing bd distance between parent and child
+        self._bd_dist_to_parent_bd=-1
 
 
 
@@ -91,6 +91,11 @@ def get_params_sum(model, trainable_only=False):
         u=sum([x.sum().item() for x in model_parameters])
         return u
 
+def _identity(x):
+    """
+    because pickle and thus scoop don't like lambdas...
+    """
+    return x
 
 class SmallFC_FW(torch.nn.Module, Agent):
 
@@ -112,7 +117,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
 
 
         self.non_lin=_non_lin_dict[non_lin] 
-        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else MiscUtils.identity
+        self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else _identity
 
 
     def forward(self, x, return_numpy=True):
