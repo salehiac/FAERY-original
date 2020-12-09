@@ -65,6 +65,17 @@ def create_directory_with_pid(dir_basename,remove_if_exists=True,no_pid=False):
         fl.write("created on "+get_current_time_date()+"\n")
     return dir_path
 
+def plot_with_std_band(x,y,std,color="red"):
+    """
+    x    np array of size N
+    y    np array of size N
+    std  np array of size N
+    """
+    plt.plot(x, y, '-', color='gray')
+    plt.fill_between(x, y-std, y+std,
+                 color=color, alpha=0.2)
+    plt.show()
+
 class colors:
     red=(255,0,0)
     green=(0,255,0)
