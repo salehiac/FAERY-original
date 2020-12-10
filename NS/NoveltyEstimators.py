@@ -109,7 +109,7 @@ class LearnedNovelty1d(NoveltyEstimator):
             non_lin="leaky_relu",
             use_bn=True)
        
-        self.optimizer = torch.optim.SGD(self.learnt.parameters(), lr=1e-3)
+        self.optimizer = torch.optim.SGD(self.learnt.parameters(), lr=1e-2)
         self.archive=None
         self.pop=None
         self.batch_sz=batch_sz
@@ -150,7 +150,7 @@ class LearnedNovelty1d(NoveltyEstimator):
             e_l=self.learnt(batch)
             loss=(e_l-e_frozen).norm()**2
             loss/=self.batch_sz
-            print(batch)
+            #print(batch)
             print("loss==",loss)
             if torch.isnan(loss).any():
                 raise Exception("loss is Nan. Maybe tray reducing the learning rate")

@@ -135,7 +135,7 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 
     ages=[]
     dists=[]
-    for gen in range(0,225):
+    for gen in range(0,80):
         if gen%100==0:
             print("gen==",gen)
         fn=root_dir+f"/population_gen_{gen}"
@@ -196,7 +196,7 @@ if __name__=="__main__":
     if AGE_AND_DISTANCE_TO_PARENT:
 
         root="/tmp/"
-        list_of_experiments=[root+"/NS_log_56091/"]
+        list_of_experiments=[root+"/NS_log_63774/"]
         
         #root="/home/achkan/misc_experiments/guidelines_log/"
         #list_of_experiments=[

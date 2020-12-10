@@ -109,9 +109,10 @@ class NoveltySearch:
         initial_pop=self.generate_new_agents(initial_pop, generation=0)
 
         self._initial_pop=copy.deepcopy(initial_pop)
-       
-        if n_offspring!=len(initial_pop):
-            print(colored("[NS Warning] len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
+      
+        assert n_offspring>=len(initial_pop) , "n_offspring should be larger or equal to n_pop"
+        #if n_offspring!=len(initial_pop):
+        #    print(colored("[NS Warning] len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
 
         self.visualise_bds_flag= visualise_bds_flag
 
@@ -207,10 +208,10 @@ class NoveltySearch:
     def generate_new_agents(self, parents, generation:int):
        
         parents_as_list=[(x._idx, x.get_flattened_weights()) for x in parents]
-        mutated_genotype=[(x[0], self.mutator(copy.deepcopy(x[1]))) for x in parents_as_list]#deepcopy is because of deap
+        parents_to_mutate=random.choices(range(len(parents_as_list)),k=self.n_offspring)
+        mutated_genotype=[(parents_as_list[i][0], self.mutator(copy.deepcopy(parents_as_list[i][1]))) for i in parents_to_mutate]#deepcopy is because of deap
 
         mutated_ags=[self.agent_factory() for x in range(self.n_offspring)]
-        #kept=random.choices(range(len(mutated_genotype)), k=self.n_offspring)
         kept=random.sample(range(len(mutated_genotype)), k=self.n_offspring)
         for i in range(len(kept)):
             mutated_ags[i]._parent_idx=mutated_genotype[kept[i]][0]
