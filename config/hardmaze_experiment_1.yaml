@@ -1,9 +1,9 @@
 ---
 hyperparams: 
-  population_size: 10
-  offspring_size: 10
+  population_size: 150
+  offspring_size: 150 #should be equal to population_size for now (there is a bug if offspring_size > population_size that makes it crash, todo: fix it)
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
-  num_generations: 200
+  num_generations: 400
 novelty_estimator:
   type: "learned" #choiceas are "learned", "archive_based"
 archive:
@@ -21,7 +21,7 @@ selector:
                   #are purely based on novlety
 problem:
   name: "hardmaze" 
-  bd_type: "generic" #choices are learned, learned_frozen, engineered, generic
+  bd_type: "learned_frozen" #choices are learned, learned_frozen, engineered, generic
   max_steps: 2000
   assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
 population:

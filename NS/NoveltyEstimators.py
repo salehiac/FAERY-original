@@ -149,8 +149,11 @@ class LearnedNovelty1d(NoveltyEstimator):
             self.optimizer.zero_grad()
             e_l=self.learnt(batch)
             loss=(e_l-e_frozen).norm()**2
-            #print(batch)
-            #print("loss==",loss)
+            loss/=self.batch_sz
+            print(batch)
+            print("loss==",loss)
+            if torch.isnan(loss).any():
+                raise Exception("loss is Nan. Maybe tray reducing the learning rate")
             loss.backward()
             self.optimizer.step()
 

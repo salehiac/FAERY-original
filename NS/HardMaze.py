@@ -77,6 +77,8 @@ class HardMaze(Problem):
 
         self.best_dist_to_goal=10000000
 
+        #self._debug_counter=0
+
     def close(self):
         self.env.close()
 
@@ -137,6 +139,9 @@ class HardMaze(Problem):
             if ended:
                 break
      
+        cv2.imwrite(f"/tmp/meta_observation_samples/obs_{ag._idx}.png", behavior_info)
+        #self._debug_counter+=1
+
         bd=None
         if isinstance(self.bd_extractor, BehaviorDescr.GenericBD):
             bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) 

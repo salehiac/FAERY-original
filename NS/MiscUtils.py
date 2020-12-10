@@ -400,8 +400,8 @@ if __name__=="__main__":
     TEST_TRAIN_AUTOENCODER_LINNAEUS=False
     #TEST_TRAIN_AUTOENCODER_LINNAEUS=True
     
-    #TEST_TRAINED_AUTOENCODER_CIFAR10=False
-    TEST_TRAINED_AUTOENCODER_CIFAR10=True
+    TEST_TRAINED_AUTOENCODER_CIFAR10=False
+    #TEST_TRAINED_AUTOENCODER_CIFAR10=True
 
     TEST_TRAINED_AUTOENCODER_LINNAEUS=False
     #TEST_TRAINED_AUTOENCODER_LINNAEUS=True
@@ -516,7 +516,8 @@ if __name__=="__main__":
         with torch.no_grad():
 
             #try with hardmaze
-            im=cv2.imread("../maze_b.png").astype("float")
+            #im=cv2.imread("../maze_b.png").astype("float")
+            im=cv2.imread("/tmp/meta_observation_samples/obs_31084.png").astype("float")
             #b,g,r=cv2.split(im)
             #im=cv2.merge([r,g,b])
             im/=255; im-=0.5; im*=2;

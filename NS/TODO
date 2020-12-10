@@ -1,4 +1,15 @@
 
+ATTENTION!!!!!
+
+The analysis tools have been tailored to 2d behaviors (the batch given is 600x2, where the second dim is the dimension of descriptors and 600 the number of vertical samples)
+
+==> remedy that!
+
+
+
+
+
+
 Note: doesn't sound like a good idea to have cavefly as an env here, as the main issue with that env is state representation, not novelty search
       Also, it would make sense to show that learned behaviors descriptors are interesting where there is some information that isn't just captured
       by the trajectory. In the case of exploratory cavefly, that doens't hold as it is just like the maze.

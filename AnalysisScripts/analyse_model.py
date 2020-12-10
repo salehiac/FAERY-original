@@ -41,13 +41,20 @@ def randomize_weights(net):
 
 
 
-def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir, bn_was_used=True, non_lin_type="leaky_relu"):
+def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir, 
+        bn_was_used=True,
+        non_lin_type="leaky_relu", 
+        in_dim=2, 
+        out_dim=2, 
+        behavior_type="generic_2d",
+        batch_producer=None):
     """
     root_dir      directory of an NS experiment (NS_log_{pid}), expected to contain frozen_net.model and learnt_{i}.model for i in range(200)
     """
     
     frozen_net_path=root_dir+"/frozen_net.model"
-    learned_model_generations=list(range(0,200,50))
+    learned_model_generations=list(range(0,200,10))
+    #learned_model_generations=list(range(0,20))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     #print(learned_models_paths)
     
@@ -60,8 +67,8 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir, bn_was_used
     height=int(env.map.get_real_h())
     
     #sys.argv[1]
-    frozen=MiscUtils.SmallEncoder1d(2,
-            2,
+    frozen=MiscUtils.SmallEncoder1d(in_dim,
+            out_dim,
             num_hidden=5,
             non_lin=non_lin_type,
             use_bn=bn_was_used)
@@ -72,8 +79,8 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir, bn_was_used
     models=[]
     results=[]
     for i in range(num_non_frozen):
-        model=MiscUtils.SmallEncoder1d(2,
-                2,
+        model=MiscUtils.SmallEncoder1d(in_dim,
+                out_dim,
                 num_hidden=5,
                 non_lin=non_lin_type,
                 use_bn=bn_was_used)
@@ -82,20 +89,25 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir, bn_was_used
         models.append(model)
         results.append(np.zeros([height, width]))
     
-    
-    with torch.no_grad():
-        for i in range(height):
-            if i%10==0:
-                print("i==",i)
-            batch=torch.cat([torch.ones(width,1)*i,torch.arange(width).float().unsqueeze(1)],1)
-            #print(batch)
-            z1=frozen(batch)
-            for j in range(num_non_frozen):
-                z2=models[j](batch)
-                diff=(z2-z1)**2
-                diff=diff.sum(1)
-        
-                results[j][i,:]=np.sqrt(diff.cpu().numpy())
+
+    if behavior_type=="generic_2d":
+        with torch.no_grad():
+            for i in range(height):
+                if i%10==0:
+                    print("i==",i)
+                batch=torch.cat([torch.ones(width,1)*i,torch.arange(width).float().unsqueeze(1)],1)
+                #print(batch)
+                z1=frozen(batch)
+                for j in range(num_non_frozen):
+                    z2=models[j](batch)
+                    diff=(z2-z1)**2
+                    diff=diff.sum(1)
+            
+                    results[j][i,:]=np.sqrt(diff.cpu().numpy())
+
+    elif behavior_type=="from_encoder":
+        if batch_producer is None:
+            raise Exception("you must provide a batch_producer if using from_encoder")
     
     for i in range(len(results)):
         results[i]=np.flip(results[i],0)#because hardmaze axis is inverted
@@ -123,12 +135,14 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 
     ages=[]
     dists=[]
-    for gen in range(10):
+    for gen in range(0,225):
+        if gen%100==0:
+            print("gen==",gen)
         fn=root_dir+f"/population_gen_{gen}"
         with open(fn,"rb") as f:
             pop=pickle.load(f)
 
-        ages.append(np.mean([gen - indv._created_at_gen for indv in pop])) 
+        ages.append(np.mean([gen-indv._created_at_gen for indv in pop])) 
         dists.append(np.mean([indv._bd_dist_to_parent_bd for indv in pop]))
 
     return ages, dists
@@ -138,36 +152,67 @@ if __name__=="__main__":
 
     JS_SINGLE_DIRETORY=False
     JS_MULTIPLE_DIRECTORIES=False
-
     AGE_AND_DISTANCE_TO_PARENT=True
     
     if JS_SINGLE_DIRETORY:
-        js=see_evolution_of_learned_novelty_distribution_hardmaze(sys.argv[1])
+        js=see_evolution_of_learned_novelty_distribution_hardmaze(sys.argv[1], bn_was_used=True, non_lin_type="leaky_relu", in_dim=2, out_dim=2)
+        plt.plot(js);plt.show()
 
     if JS_MULTIPLE_DIRECTORIES:
         import os
         
-        root="/home/achkan/misc_experiments/guideline_results/hard_maze/learned_novelty_generic_descriptors/uniformity/"
-        Experiment=namedtuple("Experiment","path uses_bn non_lin_type")
+        #root="/home/achkan/misc_experiments/guideline_results/hard_maze/learned_novelty_generic_descriptors/uniformity/"
+        root="/home/achkan/misc_experiments/guidelines_log/"
         
-        list_of_experiments=[Experiment(root+"/exp_1/NS_log_4735", False, "tanh"),
-                Experiment(root+"/NS_log_48482/", True, "leaky_relu"),
-                Experiment(root+"/NS_log_56907/",True, "leaky_relu")]
+        Experiment=namedtuple("Experiment","path uses_bn non_lin_type in_dim out_dim")
+        
+        #list_of_experiments=[Experiment(root+"/exp_1/NS_log_4735", False, "tanh", 2, 2),
+        #        Experiment(root+"/NS_log_48482/", True, "leaky_relu", 2 ,2 ),
+        #        Experiment(root+"/NS_log_56907/",True, "leaky_relu", 2, 2)]
+        
+        list_of_experiments=[
+                Experiment(root+"/NS_log_22022/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_24029/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_24980/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_25764/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_26559/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_27382/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_29921/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_32611/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_34345/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_36944/",True, "leaky_relu", 2, 2),
+                Experiment(root+"/NS_log_39017/",True, "leaky_relu", 2, 2)]
 
         js_evolutions=[]
         for x in list_of_experiments:
-            js_evol=see_evolution_of_learned_novelty_distribution_hardmaze(x.path, x.uses_bn, x.non_lin_type)
+            js_evol=see_evolution_of_learned_novelty_distribution_hardmaze(x.path, x.uses_bn, x.non_lin_type, x.in_dim, x.out_dim)
             js_evolutions.append(js_evol)
 
         js_evolutions=np.array(js_evolutions)
         m_js_evolutions=js_evolutions.mean(0)
         std_js_evolutions=js_evolutions.std(0)
-        MiscUtils.plot_with_std_band(range(len(m_js_evolutions)),m_js_evolutions,std_js_evolutions)
+        MiscUtils.plot_with_std_band(range(len(m_js_evolutions)),m_js_evolutions,std_js_evolutions**2)
 
     if AGE_AND_DISTANCE_TO_PARENT:
 
         root="/tmp/"
-        list_of_experiments=[root+"/NS_log_14079/"]
+        list_of_experiments=[root+"/NS_log_56091/"]
+        
+        #root="/home/achkan/misc_experiments/guidelines_log/"
+        #list_of_experiments=[
+        #        root+"/NS_log_22022/",
+        #        root+"/NS_log_24029/",
+        #        root+"/NS_log_24980/",
+        #        root+"/NS_log_25764/",
+        #        root+"/NS_log_26559/",
+        #        root+"/NS_log_27382/",
+        #        root+"/NS_log_29921/",
+        #        root+"/NS_log_32611/",
+        #        root+"/NS_log_34345/",
+        #        root+"/NS_log_36944/",
+        #        root+"/NS_log_39017/"]
+
+
 
         age_evolutions=[]
         bd_dist_to_parent_evolutions=[]

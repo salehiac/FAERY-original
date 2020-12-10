@@ -322,7 +322,7 @@ if __name__=="__main__":
                 agent_factory=make_ag,
                 visualise_bds_flag=visualise_bds,
                 map_type=map_t,
-                logs_root="/tmp/",
+                logs_root=config["ns_log_root"],
                 compute_parent_child_stats=config["compute_parent_child_stats"])
 
         if 0:
