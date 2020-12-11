@@ -174,6 +174,8 @@ class NoveltySearch:
             
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
+            #print("===",len(parents), lent(offsprings), len(pop))
+
             self.nov_estimator.update(archive=self.archive, pop=pop)
             novs=self.nov_estimator()#computes novelty of all population
             for ag_i in range(len(pop)):
@@ -216,8 +218,10 @@ class NoveltySearch:
         parents_to_mutate=random.choices(range(len(parents_as_list)),k=self.n_offspring)
         mutated_genotype=[(parents_as_list[i][0], self.mutator(copy.deepcopy(parents_as_list[i][1]))) for i in parents_to_mutate]#deepcopy is because of deap
 
-        mutated_ags=[self.agent_factory() for x in range(self.n_offspring)]
-        kept=random.sample(range(len(mutated_genotype)), k=self.n_offspring)
+        num_s=self.n_offspring if generation!=0 else len(parents_as_list)
+        
+        mutated_ags=[self.agent_factory() for x in range(num_s)]
+        kept=random.sample(range(len(mutated_genotype)), k=num_s)
         for i in range(len(kept)):
             mutated_ags[i]._parent_idx=mutated_genotype[kept[i]][0]
             mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])

@@ -33,7 +33,7 @@ ns_log_root: "/home/achkan/guideline_results/" #directory where NS will create a
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
 compute_parent_child_stats: 1 # 0 or 1
-disable_tqdm: 1 # 0 or 1, you might want to disable it if you're using nohup
+disable_tqdm: 0 # 0 or 1, you might want to disable it if you're using nohup
 
   
 

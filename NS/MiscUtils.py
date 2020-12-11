@@ -387,7 +387,10 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
 
 def load_autoencoder(path, w, h, in_c, emb_sz):
     the_model=SmallAutoEncoder2d(in_h=h, in_w=w, in_c=in_c, emb_sz=emb_sz)
-    the_model.load_state_dict(torch.load(path))
+    if torch.cuda.is_available():
+        the_model.load_state_dict(torch.load(path))
+    else:
+        the_model.load_state_dict(torch.load(path,map_location="cpu"))
     return the_model
 
 if __name__=="__main__":
