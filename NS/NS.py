@@ -174,7 +174,7 @@ class NoveltySearch:
             
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
-            #print("===",len(parents), lent(offsprings), len(pop))
+            #print("===",len(parents), len(offsprings), len(pop))
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
             novs=self.nov_estimator()#computes novelty of all population
