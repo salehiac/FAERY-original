@@ -18,6 +18,8 @@
 
 from abc import ABC, abstractmethod
 import random
+#import numpy as np
+import pickle
 #import time
 #import sys
 #import os
@@ -83,6 +85,10 @@ class ListArchive(Archive):
             self.container=[self.container[i] for i in r]
         else:
             raise NotImplementedError("manag_size")
+
+    def dump(self, fn):
+        with open(fn,"wb") as f:
+            pickle.dump(self.container,f)
 
     def __len__(self):
         return len(self.container)

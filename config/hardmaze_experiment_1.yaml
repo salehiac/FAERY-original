@@ -1,7 +1,7 @@
 ---
 hyperparams: 
-  population_size: 200
-  offspring_size: 400 
+  population_size: 200 
+  offspring_size: 400
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
   num_generations: 400
 novelty_estimator:
@@ -12,6 +12,7 @@ archive:
   growth_strategy: "random" # choices are "most_novel", "random"
   removal_strategy: "random" 
   max_size: 200
+  save_to_file: 1 # 0 or 1, saves archies each iteraiton
 mutator:
   type: "poly_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
   gaussian_params: {"mu": 0.0, "sigma": 0.2, "indpb": 0.8} #Gomes' paper recommends low mutation rates (indpb)
@@ -23,15 +24,16 @@ problem:
   name: "hardmaze" 
   bd_type: "learned_frozen" #choices are learned, learned_frozen, engineered, generic
   max_steps: 2000
-  assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
+  assets: {"env_im":"/home/achkan/misc_libs/noveltysearchlib/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
-ns_log_root: "/tmp/" #directory where NS will create a log directory based on its main pid
+ns_log_root: "/home/achkan/guideline_results/" #directory where NS will create a log directory based on its main pid
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
 compute_parent_child_stats: 1 # 0 or 1
+disable_tqdm: 1 # 0 or 1, you might want to disable it if you're using nohup
 
   
 

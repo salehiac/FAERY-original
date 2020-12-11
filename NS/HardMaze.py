@@ -139,7 +139,7 @@ class HardMaze(Problem):
             if ended:
                 break
      
-        cv2.imwrite(f"/tmp/meta_observation_samples/obs_{ag._idx}.png", behavior_info)
+        #cv2.imwrite(f"/tmp/meta_observation_samples/obs_{ag._idx}.png", behavior_info)
         #self._debug_counter+=1
 
         bd=None

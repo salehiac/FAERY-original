@@ -127,6 +127,9 @@ class NoveltySearch:
         self.task_solvers={}#key,value=generation, list(agents)
 
         self.compute_parent_child_stats=compute_parent_child_stats
+        
+        self.save_archive_to_file=True
+        self.disable_tqdm=False
 
 
     def eval_agents(self, agents):
@@ -163,7 +166,7 @@ class NoveltySearch:
         parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
         self.eval_agents(parents)
 
-        tqdm_gen = tqdm.trange(iters, desc='', leave=True)
+        tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
         for it in tqdm_gen:
 
             offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
@@ -189,6 +192,8 @@ class NoveltySearch:
             parents=parents_next
             if self.archive is not None:
                 self.archive.update(pop, thresh=problem.dist_thresh)
+                if self.save_archive_to_file:
+                    self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
             MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents)
@@ -336,6 +341,11 @@ if __name__=="__main__":
         #do NS
         stop_on_reaching_task=config["stop_when_task_solved"]
         nov_estimator.log_dir=ns.log_dir_path
+        ns.disable_tqdm=config["disable_tqdm"]
+        ns.save_archive_to_file=config["archive"]["save_to_file"]
+        if ns.disable_tqdm:
+            print(colored("[NS info] tqdm is disabled.", "magenta", attrs=["bold"]))
+        
         final_pop, solutions=ns(iters=config["hyperparams"]["num_generations"],stop_on_reaching_task=stop_on_reaching_task, save_checkpoints=config["save_checkpoints"])
     
     elif len(args.resume):
