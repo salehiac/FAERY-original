@@ -159,7 +159,7 @@ class convNxN(torch.nn.Module):
     def forward(self,tns):
 
         out=self.cnv(tns)
-        return self.bn(self.bn(out))
+        return self.non_lin(self.bn(out))
 
 class SmallAutoEncoder2d(torch.nn.Module):
 
@@ -193,8 +193,12 @@ class SmallAutoEncoder2d(torch.nn.Module):
         if with_decoder:
             self.mdls_d=torch.nn.ModuleList([
                 torch.nn.Linear(emb_sz, self.n_f*self.r_h*self.r_w),
-                torch.nn.ConvTranspose2d(self.n_f, 3, 3, stride=2, padding=1),
+                torch.nn.ConvTranspose2d(self.n_f, 3, kernel_size=3, stride=2, padding=1),
                 ])
+
+        #self.last=convNxN(3, 3, ks=3, stride=1)
+        #self.loss= torch.nn.CrossEntropyLoss()
+        self.loss= torch.nn.BCELoss()
 
     
 
@@ -204,7 +208,9 @@ class SmallAutoEncoder2d(torch.nn.Module):
         for m in self.mdls_e[:-1]:
             out=m(out)
         #print("before code==",out.shape)
-        code=self.mdls_e[-1](out.view(bs, -1))
+        #code=torch.nn.functional.relu6(self.mdls_e[-1](out.view(bs, -1)))
+        code=torch.tanh(self.mdls_e[-1](out.view(bs, -1)))
+        #code=self.mdls_e[-1](out.view(bs, -1))
         out_d=None
         if self.mdls_d is not None and forward_decoder:
             out_d=torch.relu(self.mdls_d[0](code))
@@ -219,15 +225,19 @@ class SmallAutoEncoder2d(torch.nn.Module):
                 else:
                     out_d=non_lin(m(out_d))
         else:
-            return code
+            return code.detach()
 
-        out_d=torch.tanh(out_d)#because inputs are normalized in [-1,1]
-        diff=out_d-x
-        loss=(diff.norm()**2)/(x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3])
+        #out_d=self.last(out_d)
+        out_d=torch.sigmoid(out_d)#because inputs are normalized in [-1,1]
+        #diff=out_d-x
+        #loss=(diff.norm()**2)/(x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3])
+        target=x.clone().detach()
+        #pdb.set_trace()
+        loss=self.loss(out_d,target)
 
-        return code, out_d, loss
+        return code.detach(), out_d, loss
 
-def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus"):
+def train_encoder(autoencoder, train_shuffle=False, iters=100, dataset="linnaeus"):
     """
     dataset   can either be cifar10 or linnaeus
     """
@@ -237,17 +247,27 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
     batch_sz=128
    
     if dataset=="cifar10":
-        transform = transforms.Compose(
+        
+        degrees=20
+        transform_train = transforms.Compose(
                 [transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                torchvision.transforms.ToPILImage(),
+                torchvision.transforms.RandomAffine(degrees, translate=(0,0.6), scale=None, shear=2, resample=0, fillcolor=0),
+                transforms.ToTensor()])
+        
+        transform_test= transforms.Compose(
+                [transforms.ToTensor()])
+
+
+        #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
         trainset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=True,
-                                            download=True, transform=transform)
+                                            download=True, transform=transform_train)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_sz,
                                               shuffle=train_shuffle, num_workers=1)
         
         testset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=False,
-                                           download=True, transform=transform)
+                                           download=True, transform=transform_test)
         testloader = torch.utils.data.DataLoader(testset, batch_size=batch_sz,
                                              shuffle=False, num_workers=1)
         
@@ -257,18 +277,16 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
 
     if dataset=="linnaeus":
        
-        degrees=50
        
+        degrees=50
         transform_train = transforms.Compose(
                 [transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                     torchvision.transforms.ToPILImage(),
                     torchvision.transforms.RandomAffine(degrees, translate=(0,1.0), scale=None, shear=3, resample=0, fillcolor=0),
                     transforms.ToTensor()])
                 
         transform_test = transforms.Compose(
-                [transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                [transforms.ToTensor()])
         
         
         trainset=LinnaeusLoader.Linnaeus("../../linnaeus/",train=True,transform=transform_train)
@@ -290,7 +308,7 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
     loss_hist_val=[]
     for epoch in range(iters):  # loop over the dataset multiple times
 
-        if epoch==100:
+        if epoch==20:
             LR/=2
             for param_group in optimizer.param_groups:
                 param_group['lr'] = LR
@@ -313,7 +331,7 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
             optimizer.zero_grad()
             _, out_d, loss = autoencoder(inputs)
 
-            if 0:#batch_i%30==0:#epoch%50==0:
+            if 0:#batch_i%300==0:#epoch%50==0:
                 for i in range(1):
                     in_data=inputs[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                     out_data=out_d[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
@@ -355,7 +373,7 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
                 _, out_d, loss_v = autoencoder(inputs)
                 epc_val_h.append(loss_v.item())
                 
-                if 0:#batch_i%4==0:#epoch%50==0:
+                if 0:#batch_i%30==0:#epoch%50==0:
                     for i in range(1):
                         in_data=inputs[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                         out_data=out_d[i,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
@@ -380,9 +398,11 @@ def train_encoder(autoencoder, train_shuffle=False, iters=500, dataset="linnaeus
         plt.close()
 
         if dataset=="cifar10":
-            torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves_cifar10/autoencoder_"+str(epoch))
+            #torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves_cifar10/autoencoder_"+str(epoch))
+            torch.save(autoencoder.state_dict(), "/tmp/autoencoder_"+str(epoch))
         else:
-            torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves_linnaeus/autoencoder_"+str(epoch))
+            #torch.save(autoencoder.state_dict(), "/home/achkan/Desktop/tmp_desktop/autoencoder_saves_linnaeus/autoencoder_"+str(epoch))
+            torch.save(autoencoder.state_dict(), "/tmp/autoencoder_"+str(epoch))
         #torch.save(autoencoder, "/tmp/autoencoder_"+str(epoch))
 
 def load_autoencoder(path, w, h, in_c, emb_sz):
@@ -397,20 +417,24 @@ if __name__=="__main__":
 
     TEST_CREAT_DIR=False
     TEST_CREATE_AUENCODER=False
-    TEST_TRAIN_AUTOENCODER_CIFAR10=False
-    #TEST_TRAIN_AUTOENCODER_CIFAR10=True
+    TRAIN_AUTOENCODER_CIFAR10=False
+    #TRAIN_AUTOENCODER_CIFAR10=True
 
-    TEST_TRAIN_AUTOENCODER_LINNAEUS=False
-    #TEST_TRAIN_AUTOENCODER_LINNAEUS=True
+    TRAIN_AUTOENCODER_LINNAEUS=False
+    #TRAIN_AUTOENCODER_LINNAEUS=True
     
-    TEST_TRAINED_AUTOENCODER_CIFAR10=False
-    #TEST_TRAINED_AUTOENCODER_CIFAR10=True
+    #TEST_TRAINED_AUTOENCODER_CIFAR10=False
+    TEST_TRAINED_AUTOENCODER_CIFAR10=True
 
     TEST_TRAINED_AUTOENCODER_LINNAEUS=False
     #TEST_TRAINED_AUTOENCODER_LINNAEUS=True
 
-    #TEST_AUTOENCODER_WITH_MAZE=False
-    TEST_AUTOENCODER_WITH_MAZE=True
+    
+    #TEST_TRAINED_AUTOENCODER_WITH_MAZE_CIFAR10=False
+    TEST_TRAINED_AUTOENCODER_WITH_MAZE_CIFAR10=True
+
+    TEST_TRAINED_AUTOENCODER_WITH_MAZE_LINNAEUS=False
+    #TEST_TRAINED_AUTOENCODER_WITH_MAZE_LINNAEUS=True
 
     if TEST_CREAT_DIR:
         _=create_directory_with_pid(dir_basename="/tmp/report_1",remove_if_exists=True,no_pid=True)
@@ -425,15 +449,15 @@ if __name__=="__main__":
             t=torch.rand(2,3,N,N)
             code, reconstruction, loss=s2(t)
             
-    if TEST_TRAIN_AUTOENCODER_CIFAR10:
+    if TRAIN_AUTOENCODER_CIFAR10:
         N=32#cifar10 images are 32x32
         s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=8)
-        train_encoder(s2,train_shuffle=True,iters=1500,dataset="cifar10")
+        train_encoder(s2,train_shuffle=True,iters=100,dataset="cifar10")
     
-    if TEST_TRAIN_AUTOENCODER_LINNAEUS:
+    if TRAIN_AUTOENCODER_LINNAEUS:
         N=64#linnaeus images are 64x64
         s2=SmallAutoEncoder2d(in_h=N, in_w=N, in_c=3, emb_sz=8)
-        train_encoder(s2,train_shuffle=True,iters=1500,dataset="linnaeus")
+        train_encoder(s2,train_shuffle=True,iters=100,dataset="linnaeus")
 
     if TEST_TRAINED_AUTOENCODER_CIFAR10:
         import torchvision
@@ -441,12 +465,13 @@ if __name__=="__main__":
 
 
         N=32;
-        path="../models/cifar10/autoencoder_80"
+        #path="../models/cifar10/autoencoder_50"
+        path="/tmp/autoencoder_40"
+        #path="/tmp/autoencoder_50"
         ae=load_autoencoder(path, w=N, h=N, in_c=3, emb_sz=8)
         
         transform = transforms.Compose(
-                [transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                [transforms.ToTensor()])
 
         testset = torchvision.datasets.CIFAR10(root='../../cifar_data', train=False,
                                        download=True, transform=transform)
@@ -474,12 +499,12 @@ if __name__=="__main__":
         import torchvision.transforms as transforms
 
         N=64;
-        path="../models/linnaeus/autoencoder_30"
+        #path="../models/linnaeus/autoencoder_99"
+        path="/tmp/autoencoder_99"
         ae=load_autoencoder(path, w=N, h=N, in_c=3, emb_sz=8)
         
         transform_test = transforms.Compose(
-                [transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                [transforms.ToTensor()])
         
 
         testset=LinnaeusLoader.Linnaeus("../../linnaeus/",train=False,transform=transform_test)
@@ -504,38 +529,94 @@ if __name__=="__main__":
                 plt.imshow(result)
                 plt.show()
     
-
     
-    if TEST_AUTOENCODER_WITH_MAZE:
+    if TEST_TRAINED_AUTOENCODER_WITH_MAZE_CIFAR10:
        
-        N=32; path="../models/cifar10/autoencoder_80"
-        #N=64; path="../models/linnaeus/autoencoder_30"
+        N=32; model_path="../models/cifar10/autoencoder_50"
+        
+        with open("/home/achkan/misc_experiments/guideline_results/hard_maze/learned_bds_and_learned_novelty/meta_observation_samples_names_2.pickle","rb") as f:
+            im_paths=pickle.load(f)
+        im_paths=["/home/achkan/misc_experiments/guideline_results/hard_maze/learned_bds_and_learned_novelty/meta_observation_samples_2/"+x for x in im_paths]
+  
+        import random
+        im_paths=random.sample(im_paths,k=2)
 
-        ae=load_autoencoder(path, w=N, h=N, in_c=3, emb_sz=8)
+        ae=load_autoencoder(model_path, w=N, h=N, in_c=3, emb_sz=8)
+        code_list=[]
+        for im_path in im_paths:
+
        
-        ae.eval()
-        ae.cuda()
+            ae.eval()
+            ae.cuda()
+            
+            with torch.no_grad():
+
+                #try with hardmaze
+                #im=cv2.imread("../maze_b.png").astype("float")
+                im=cv2.imread(im_path).astype("float")
+                #b,g,r=cv2.split(im)
+                #im=cv2.merge([r,g,b])
+                im/=255; 
+                im_t=torch.Tensor(im).transpose(1,2).transpose(0,1).unsqueeze(0).cuda()
+                im_t_s=torch.nn.functional.interpolate(im_t,(N,N))#,mode="bilinear",algin_corners=True)
+                im_t_np=im_t_s.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+                code,zz,loss=ae(im_t_s)
+                code_list.append(code.cpu().detach().numpy())
+                zz_np=zz.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+                print("loss=",loss)
+                #zz_np-=zz_np.min();zz_np/=zz_np.max();
+                #zz_np/=zz_np.max();
+                
+                plt.imshow(im_t_np);plt.show()
+                plt.imshow(zz_np);plt.show()
+
+        code_list=np.concatenate(code_list,0)
+        print(code_list.max())
+        print(code_list.min())
+
+    if TEST_TRAINED_AUTOENCODER_WITH_MAZE_LINNAEUS:
         
-        with torch.no_grad():
-
-            #try with hardmaze
-            #im=cv2.imread("../maze_b.png").astype("float")
-            im=cv2.imread("/tmp/meta_observation_samples/obs_31084.png").astype("float")
-            #b,g,r=cv2.split(im)
-            #im=cv2.merge([r,g,b])
-            im/=255; im-=0.5; im*=2;
-            im_t=torch.Tensor(im).transpose(1,2).transpose(0,1).unsqueeze(0).cuda()
-            im_t_s=torch.nn.functional.interpolate(im_t,(N,N))#,mode="bilinear",algin_corners=False)
-            im_t_np=im_t_s.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
-            plt.imshow(im_t_np);plt.show()
-            _,zz,loss=ae(im_t_s)
-            zz_np=zz.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
-            print("loss=",loss)
-            zz_np-=zz_np.min();zz_np/=zz_np.max();
-            plt.imshow(zz_np);plt.show()
-
-
+        #N=64; model_path="../models/linnaeus/autoencoder_99"
+        N=64; model_path="/tmp/autoencoder_99"
         
+        with open("/home/achkan/misc_experiments/guideline_results/hard_maze/learned_bds_and_learned_novelty/meta_observation_samples_names_2.pickle","rb") as f:
+            im_paths=pickle.load(f)
+        im_paths=["/home/achkan/misc_experiments/guideline_results/hard_maze/learned_bds_and_learned_novelty/meta_observation_samples_2/"+x for x in im_paths]
+  
+        import random
+        im_paths=random.sample(im_paths,k=2)
 
+        ae=load_autoencoder(model_path, w=N, h=N, in_c=3, emb_sz=8)
+        code_list=[]
+        for im_path in im_paths:
+
+       
+            ae.eval()
+            ae.cuda()
+            
+            with torch.no_grad():
+
+                #try with hardmaze
+                #im=cv2.imread("../maze_b.png").astype("float")
+                im=cv2.imread(im_path).astype("float")
+                #b,g,r=cv2.split(im)
+                #im=cv2.merge([r,g,b])
+                im/=255; 
+                im_t=torch.Tensor(im).transpose(1,2).transpose(0,1).unsqueeze(0).cuda()
+                im_t_s=torch.nn.functional.interpolate(im_t,(N,N))#,mode="bilinear",algin_corners=False)
+                im_t_np=im_t_s.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+                code,zz,loss=ae(im_t_s)
+                code_list.append(code.cpu().detach().numpy())
+                zz_np=zz.transpose(1,2).transpose(3,2).cpu().detach().numpy()[0]
+                print("loss=",loss)
+                #zz_np-=zz_np.min();zz_np/=zz_np.max();
+                zz_np/=zz_np.max();
+                
+                plt.imshow(im_t_np);plt.show()
+                plt.imshow(zz_np);plt.show()
+
+        code_list=np.concatenate(code_list,0)
+        print(code_list.max())
+        print(code_list.min())
 
 

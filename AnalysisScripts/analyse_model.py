@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import pdb
 
 import scipy.stats as stats
 import scipy.special
@@ -102,6 +103,9 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
                     z2=models[j](batch)
                     diff=(z2-z1)**2
                     diff=diff.sum(1)
+                    if torch.isnan(diff).any():
+                        print("j==",j)
+                        pdb.set_trace()
             
                     results[j][i,:]=np.sqrt(diff.cpu().numpy())
 
@@ -135,7 +139,7 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 
     ages=[]
     dists=[]
-    for gen in range(0,80):
+    for gen in range(0,200,10):
         if gen%100==0:
             print("gen==",gen)
         fn=root_dir+f"/population_gen_{gen}"
@@ -162,7 +166,8 @@ if __name__=="__main__":
         import os
         
         #root="/home/achkan/misc_experiments/guideline_results/hard_maze/learned_novelty_generic_descriptors/uniformity/"
-        root="/home/achkan/misc_experiments/guidelines_log/"
+        #root="/home/achkan/misc_experiments/guidelines_log/"
+        root="/home/achkan/misc_experiments/guidelines_log/hardmaze_2ddescr/"
         
         Experiment=namedtuple("Experiment","path uses_bn non_lin_type in_dim out_dim")
         
@@ -195,10 +200,32 @@ if __name__=="__main__":
 
     if AGE_AND_DISTANCE_TO_PARENT:
 
-        root="/tmp/"
-        list_of_experiments=[root+"/NS_log_63774/"]
+        #root="/tmp/"
+        #list_of_experiments=[root+"/NS_log_63774/"]
+
+        root="/home/achkan/misc_experiments/guidelines_log/hardmaze_8ddescr/"
+
+
+
+        list_of_experiments=[
+                root+"NS_log_103925/",
+                root+"NS_log_63774/",
+                root+"NS_log_69984/",
+                root+"NS_log_71510/",
+                root+"NS_log_72894/",
+                root+"NS_log_76509/",
+                root+"NS_log_80616/",
+                root+"NS_log_81854/",
+                root+"NS_log_84993/",
+                root+"NS_log_89880/",
+                root+"NS_log_91040/",
+                root+"NS_log_92328/",
+                root+"NS_log_93631/"]
+
+
+
         
-        #root="/home/achkan/misc_experiments/guidelines_log/"
+        #root="/home/achkan/misc_experiments/guidelines_log/hardmaze_2ddescr/"
         #list_of_experiments=[
         #        root+"/NS_log_22022/",
         #        root+"/NS_log_24029/",
@@ -216,7 +243,9 @@ if __name__=="__main__":
 
         age_evolutions=[]
         bd_dist_to_parent_evolutions=[]
-        for ex in list_of_experiments:
+        for ex_i in range(len(list_of_experiments)):
+            ex=list_of_experiments[ex_i]
+            print(f"===========  experiment {ex_i}/{len(list_of_experiments)} ==========")
             age_ev, dist_to_parent_bd = evolution_of_age_and_parent_child_distances(ex)
             age_evolutions.append(age_ev)
             bd_dist_to_parent_evolutions.append(dist_to_parent_bd)
@@ -229,7 +258,7 @@ if __name__=="__main__":
         m_bd=bd_dist_to_parent_evolutions.mean(0)
         std_bd=bd_dist_to_parent_evolutions.std(0)
         
-        MiscUtils.plot_with_std_band(range(len(m_age)),m_age,std_age)
-        MiscUtils.plot_with_std_band(range(len(m_bd)),m_bd,std_bd)
+        MiscUtils.plot_with_std_band(range(len(m_age)),m_age,std_age**2)
+        MiscUtils.plot_with_std_band(range(len(m_bd)),m_bd,std_bd**2)
 
 
