@@ -75,7 +75,7 @@ class FrozenEncoderBased(BehaviorDescr):
     def __init__(self):
         super().__init__()
         self.dims=8
-        self.autoencoder=MiscUtils.load_autoencoder("../models/linnaeus/autoencoder_30", w=64, h=64, in_c=3, emb_sz=8)
+        self.autoencoder=MiscUtils.load_autoencoder("../models/linnaeus/autoencoder_99", w=64, h=64, in_c=3, emb_sz=8)
     
     @staticmethod
     def distance(a,b):

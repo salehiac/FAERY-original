@@ -97,12 +97,12 @@ class SmallEncoder1d(torch.nn.Module):
     def __init__(self, 
             in_d,
             out_d,
-            num_hidden=5,
+            num_hidden=3,
             non_lin="relu",
             use_bn=False):
         torch.nn.Module.__init__(self)
 
-        hidden_dim=10*in_d
+        hidden_dim=3*in_d
         self.mds=torch.nn.ModuleList([torch.nn.Linear(in_d, hidden_dim)])
 
         for i in range(num_hidden-1):
@@ -412,6 +412,26 @@ def load_autoencoder(path, w, h, in_c, emb_sz):
     else:
         the_model.load_state_dict(torch.load(path,map_location="cpu"))
     return the_model
+
+
+#class torch_timer:
+#    def __init__(self,with_cuda):
+#        self.with_cuda=with_cuda
+#        self.reset()
+#    def reset(self):
+#        if self.with_cuda:
+#            self.start=torch.cuda.Event(enable_timing=True)
+#            self.end=torch.cuda.Event(enable_timing=True)
+#    def tic(self):
+#        if self.with_cuda:
+#            self.reset()
+#            self.start.record()
+#    def toc(self):
+#        if self.with_cuda:
+#            self.end.record()
+#            torch.cuda.synchronize()
+#            return self.start.elapsed_time(self.end)
+#
 
 if __name__=="__main__":
 

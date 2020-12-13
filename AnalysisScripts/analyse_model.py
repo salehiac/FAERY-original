@@ -207,8 +207,9 @@ if __name__=="__main__":
 
 
 
-        list_of_experiments=[
-                root+"NS_log_103925/",
+        
+        list_of_experiments=[root+"NS_log_103925/",
+                root+"NS_log_119372/",
                 root+"NS_log_63774/",
                 root+"NS_log_69984/",
                 root+"NS_log_71510/",
@@ -222,9 +223,6 @@ if __name__=="__main__":
                 root+"NS_log_92328/",
                 root+"NS_log_93631/"]
 
-
-
-        
         #root="/home/achkan/misc_experiments/guidelines_log/hardmaze_2ddescr/"
         #list_of_experiments=[
         #        root+"/NS_log_22022/",

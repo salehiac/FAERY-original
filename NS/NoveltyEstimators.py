@@ -97,7 +97,7 @@ class LearnedNovelty1d(NoveltyEstimator):
 
         self.frozen=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
-            num_hidden=5,
+            num_hidden=3,
             non_lin="leaky_relu",
             use_bn=True)
         #self.frozen.weights_to_constant(1.0)
@@ -105,7 +105,7 @@ class LearnedNovelty1d(NoveltyEstimator):
         
         self.learnt=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
-            num_hidden=5,
+            num_hidden=3,
             non_lin="leaky_relu",
             use_bn=True)
        
