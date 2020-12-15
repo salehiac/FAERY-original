@@ -24,6 +24,7 @@ import functools
 import pdb
 import warnings
 import pickle
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,7 +67,7 @@ def create_directory_with_pid(dir_basename,remove_if_exists=True,no_pid=False):
         fl.write("created on "+get_current_time_date()+"\n")
     return dir_path
 
-def plot_with_std_band(x,y,std,color="red"):
+def plot_with_std_band(x,y,std,color="red",hold_on=False):
     """
     x    np array of size N
     y    np array of size N
@@ -75,7 +76,9 @@ def plot_with_std_band(x,y,std,color="red"):
     plt.plot(x, y, '-', color='gray')
     plt.fill_between(x, y-std, y+std,
                  color=color, alpha=0.2)
-    plt.show()
+
+    if not hold_on:
+        plt.show()
 
 def dump_pickle(fn, obj):
     with open(fn, "wb") as fl:
@@ -121,13 +124,22 @@ class SmallEncoder1d(torch.nn.Module):
         for md in self.mds[:-1]:
             out=self.bn(self.non_lin(md(out)))
 
-        return self.mds[-1](out)
+        return torch.tanh(self.mds[-1](out))
 
     def weights_to_constant(self,cst):
         with torch.no_grad():
             for m in self.mds:
                 m.weight.fill_(cst)
                 m.bias.fill_(cst)
+    def weights_to_rand(self,d=5):
+        with torch.no_grad():
+            for m in self.mds:
+                #m.weight.fill_(np.random.randn(m.weight.shape)*d)
+                #m.bias.fill_(np.random.randn(m.weight.shape)*d)
+                #pdb.set_trace()
+                m.weight.data=torch.randn_like(m.weight.data)*d
+                m.bias.data=torch.randn_like(m.bias.data)*d
+
        
 
 
@@ -432,6 +444,38 @@ def load_autoencoder(path, w, h, in_c, emb_sz):
 #            torch.cuda.synchronize()
 #            return self.start.elapsed_time(self.end)
 #
+def selRoulette(individuals, k, fit_attr=None):
+    """
+    taken from deap 
+    
+    Select *k* individuals from the input *individuals* using *k*
+    spins of a roulette. The selection is made by looking only at the first
+    objective of each individual. The list returned contains references to
+    the input *individuals*.
+    :param individuals: A list of individuals to select from.
+    :param k: The number of individuals to select.
+    :param fit_attr: The attribute of individuals to use as selection criterion
+    :returns: A list of selected individuals.
+    This function uses the :func:`~random.random` function from the python base
+    :mod:`random` module.
+    .. warning::
+       The roulette selection by definition cannot be used for minimization
+       or when the fitness can be smaller or equal to 0.
+    """
+
+    s_inds = sorted(individuals, key=lambda x:x._nov, reverse=True)
+    sum_fits = sum(getattr(ind, "_nov") for ind in individuals)
+    chosen = []
+    for i in range(k):
+        u = random.random() * sum_fits
+        sum_ = 0
+        for ind in s_inds:
+            sum_ += getattr(ind, "_nov")
+            if sum_ > u:
+                chosen.append(ind)
+                break
+
+    return chosen
 
 if __name__=="__main__":
 

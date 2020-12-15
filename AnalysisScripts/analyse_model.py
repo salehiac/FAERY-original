@@ -54,7 +54,8 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     """
     
     frozen_net_path=root_dir+"/frozen_net.model"
-    learned_model_generations=list(range(0,200,10))
+    #learned_model_generations=list(range(0,45,10))
+    learned_model_generations=list(range(0,1))
     #learned_model_generations=list(range(0,20))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     #print(learned_models_paths)
@@ -70,7 +71,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     #sys.argv[1]
     frozen=MiscUtils.SmallEncoder1d(in_dim,
             out_dim,
-            num_hidden=5,
+            num_hidden=3,
             non_lin=non_lin_type,
             use_bn=bn_was_used)
     frozen.load_state_dict(torch.load(frozen_net_path))
@@ -82,7 +83,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     for i in range(num_non_frozen):
         model=MiscUtils.SmallEncoder1d(in_dim,
                 out_dim,
-                num_hidden=5,
+                num_hidden=3,
                 non_lin=non_lin_type,
                 use_bn=bn_was_used)
         model.load_state_dict(torch.load(learned_models_paths[i]))
@@ -99,6 +100,10 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
                 batch=torch.cat([torch.ones(width,1)*i,torch.arange(width).float().unsqueeze(1)],1)
                 #print(batch)
                 z1=frozen(batch)
+                #print("=========================batch =========================== \n")
+                #print(batch)
+                #print("=========================z1=========================== \n",z1)
+                #input()
                 for j in range(num_non_frozen):
                     z2=models[j](batch)
                     diff=(z2-z1)**2
@@ -115,12 +120,15 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     
     for i in range(len(results)):
         results[i]=np.flip(results[i],0)#because hardmaze axis is inverted
-        results[i]=scipy.special.softmax(results[i])
+        #results[i]=scipy.special.softmax(results[i])
+        #results[i]=results[i]/results[i].sum()
     
-    
-    #results_np=np.concatenate(results,1)
-    #plt.imshow(results_np)
-    #plt.show()
+   
+    #pdb.set_trace()
+    results_np=np.concatenate(results,1)
+    plt.imshow(results_np)
+    plt.show()
+    pdb.set_trace()
     
     
     uniform_distrib=distrib_utils.uniform_like(results[0])
@@ -139,13 +147,14 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 
     ages=[]
     dists=[]
-    for gen in range(0,200,10):
+    for gen in range(0,400,10):
         if gen%100==0:
             print("gen==",gen)
         fn=root_dir+f"/population_gen_{gen}"
         with open(fn,"rb") as f:
             pop=pickle.load(f)
 
+        pdb.set_trace()
         ages.append(np.mean([gen-indv._created_at_gen for indv in pop])) 
         dists.append(np.mean([indv._bd_dist_to_parent_bd for indv in pop]))
 
@@ -155,8 +164,8 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 if __name__=="__main__":
 
     JS_SINGLE_DIRETORY=False
-    JS_MULTIPLE_DIRECTORIES=False
-    AGE_AND_DISTANCE_TO_PARENT=True
+    JS_MULTIPLE_DIRECTORIES=True
+    AGE_AND_DISTANCE_TO_PARENT=False
     
     if JS_SINGLE_DIRETORY:
         js=see_evolution_of_learned_novelty_distribution_hardmaze(sys.argv[1], bn_was_used=True, non_lin_type="leaky_relu", in_dim=2, out_dim=2)
@@ -167,26 +176,31 @@ if __name__=="__main__":
         
         #root="/home/achkan/misc_experiments/guideline_results/hard_maze/learned_novelty_generic_descriptors/uniformity/"
         #root="/home/achkan/misc_experiments/guidelines_log/"
-        root="/home/achkan/misc_experiments/guidelines_log/hardmaze_2ddescr/"
+        #root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze_2ddescr/"
         
         Experiment=namedtuple("Experiment","path uses_bn non_lin_type in_dim out_dim")
-        
+       
+        root="/tmp/"
+        #NS_log_3351
+        #list_of_experiments=[Experiment(root+"/NS_log_3351", False, "tanh", 2, 2)]
+        list_of_experiments=[Experiment(root+"/NS_log_67927", True, "leaky_relu", 2, 2)]
+
         #list_of_experiments=[Experiment(root+"/exp_1/NS_log_4735", False, "tanh", 2, 2),
         #        Experiment(root+"/NS_log_48482/", True, "leaky_relu", 2 ,2 ),
         #        Experiment(root+"/NS_log_56907/",True, "leaky_relu", 2, 2)]
         
-        list_of_experiments=[
-                Experiment(root+"/NS_log_22022/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_24029/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_24980/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_25764/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_26559/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_27382/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_29921/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_32611/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_34345/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_36944/",True, "leaky_relu", 2, 2),
-                Experiment(root+"/NS_log_39017/",True, "leaky_relu", 2, 2)]
+        #list_of_experiments=[
+        #        Experiment(root+"/NS_log_22022/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_24029/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_24980/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_25764/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_26559/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_27382/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_29921/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_32611/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_34345/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_36944/",True, "leaky_relu", 2, 2),
+        #        Experiment(root+"/NS_log_39017/",True, "leaky_relu", 2, 2)]
 
         js_evolutions=[]
         for x in list_of_experiments:
@@ -203,25 +217,42 @@ if __name__=="__main__":
         #root="/tmp/"
         #list_of_experiments=[root+"/NS_log_63774/"]
 
-        root="/home/achkan/misc_experiments/guidelines_log/hardmaze_8ddescr/"
 
+        #root="/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_8d/"
+        #
+        #
+        #list_of_experiments=[root+"/NS_log_37456/",
+        #        root+"NS_log_42210/",
+        #        root+"NS_log_43474/",
+        #        root+"NS_log_46048/",
+        #        root+"NS_log_51056/",
+        #        root+"NS_log_55874/",
+        #        root+"NS_log_57136/",
+        #        root+"NS_log_58441/",
+        #        root+"NS_log_59621/",
+        #        root+"NS_log_61012/",
+        #        root+"NS_log_68822/",
+        #        root+"NS_log_77562/"]
 
 
         
+        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze_8ddescr/"
         list_of_experiments=[root+"NS_log_103925/",
                 root+"NS_log_119372/",
                 root+"NS_log_63774/",
-                root+"NS_log_69984/",
-                root+"NS_log_71510/",
-                root+"NS_log_72894/",
-                root+"NS_log_76509/",
-                root+"NS_log_80616/",
-                root+"NS_log_81854/",
-                root+"NS_log_84993/",
-                root+"NS_log_89880/",
-                root+"NS_log_91040/",
-                root+"NS_log_92328/",
-                root+"NS_log_93631/"]
+                root+"NS_log_69984/"]
+                #root+"NS_log_71510/",
+                #root+"NS_log_72894/",
+                #root+"NS_log_76509/",
+                #root+"NS_log_80616/",
+                #root+"NS_log_81854/",
+                #root+"NS_log_84993/",
+                #root+"NS_log_89880/",
+                #root+"NS_log_91040/",
+                #root+"NS_log_92328/",
+                #root+"NS_log_93631/"]
+
+
 
         #root="/home/achkan/misc_experiments/guidelines_log/hardmaze_2ddescr/"
         #list_of_experiments=[
@@ -253,7 +284,7 @@ if __name__=="__main__":
         std_age=age_evolutions.std(0)
 
         bd_dist_to_parent_evolutions=np.array(bd_dist_to_parent_evolutions)
-        m_bd=bd_dist_to_parent_evolutions.mean(0)
+        m_bd=bd_dist_to_parent_evolutions.max(0)
         std_bd=bd_dist_to_parent_evolutions.std(0)
         
         MiscUtils.plot_with_std_band(range(len(m_age)),m_age,std_age**2)

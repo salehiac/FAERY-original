@@ -165,6 +165,13 @@ class NoveltySearch:
 
         parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
         self.eval_agents(parents)
+       
+        #### this is for leanred ones ATTENTION remove it for archive-based
+        self.nov_estimator.update(archive=[], pop=parents)
+        novs=self.nov_estimator()#computes novelty of all population
+        for ag_i in range(len(parents)):
+            parents[ag_i]._nov=novs[ag_i]
+            
 
         tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
         for it in tqdm_gen:
@@ -174,6 +181,12 @@ class NoveltySearch:
             
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
+            for x in pop:
+                if x._age==-1:
+                    x._age=it+1-x._created_at_gen
+                else:
+                    x._age+=1
+
             #print("===",len(parents), len(offsprings), len(pop))
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
@@ -182,6 +195,10 @@ class NoveltySearch:
                 pop[ag_i]._nov=novs[ag_i]
             
             parents_next=self.selector(individuals=pop, fit_attr="_nov")
+            p_novs=[(x._idx, x._age, x._nov) for x in parents_next]
+            print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_novs)
+
+            #parents_next=[copy.deepcopy(x) for x in parents_next]
 
             if self.compute_parent_child_stats:
                 for x in parents_next:
@@ -285,6 +302,13 @@ if __name__=="__main__":
         #create selector
         if config["selector"]["type"]=="elitist":
             selector=functools.partial(deap_tools.selBest,k=config["hyperparams"]["population_size"])
+            #selector=functools.partial(deap_tools.selWorst,k=config["hyperparams"]["population_size"])
+            #selector=functools.partial(deap_tools.selNSGA2,k=config["hyperparams"]["population_size"])
+            ##selector=functools.partial(deap_tools.selRoulette,k=config["hyperparams"]["population_size"])
+
+
+            #the issue with roulette is that it ends up chosing the same element many times
+            #selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
         else:
             raise NotImplementedError("selector")
 

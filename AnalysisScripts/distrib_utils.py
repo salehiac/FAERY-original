@@ -6,7 +6,7 @@ def KLdiv(P,Q):
     """
     P, Q 2d distributions
     """
-    C=np.log(P/Q)
+    C=np.log2(P/Q)
     return (P*C).sum()
 
 def jensen_shannon(P,Q):

@@ -47,6 +47,7 @@ class Agent(ABC):
         self._created_at_gen=-1 #to compute age
         self._parent_idx=-1#hacky way of computing bd distance between parent and child
         self._bd_dist_to_parent_bd=-1
+        self._age=-1
 
 
 

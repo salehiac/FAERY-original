@@ -22,6 +22,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import pdb
+import random
 #import time
 #import sys
 #import os
@@ -99,17 +100,19 @@ class LearnedNovelty1d(NoveltyEstimator):
             emb_dim,
             num_hidden=3,
             non_lin="leaky_relu",
-            use_bn=True)
+            use_bn=False)
         #self.frozen.weights_to_constant(1.0)
+        #self.frozen.weights_to_rand(d=0.2)
         self.frozen.eval()
         
         self.learnt=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
-            num_hidden=3,
+            num_hidden=5,
             non_lin="leaky_relu",
-            use_bn=True)
+            use_bn=False)
        
-        self.optimizer = torch.optim.SGD(self.learnt.parameters(), lr=1e-2)
+        self.optimizer = torch.optim.SGD(self.learnt.parameters(), lr=1e-3)
+        #self.optimizer = torch.optim.Adam(self.learnt.parameters(), lr=1e-3)
         self.archive=None
         self.pop=None
         self.batch_sz=batch_sz
@@ -133,32 +136,58 @@ class LearnedNovelty1d(NoveltyEstimator):
             torch.save(self.frozen.state_dict(),self.log_dir+"/frozen_net.model")
         
         torch.save(self.learnt.state_dict(),self.log_dir+f"/learnt_{self.epoch}.model")
-        
+       
+        for _ in range(5):
+            for i in range(0,self.pop_bds.shape[0],self.batch_sz):
+                print("i==",i)
+                #batch=torch.Tensor(self.pop_bds[i:i+self.batch_sz])
+                batch=torch.Tensor(self.pop_bds[random.choices(range(len(self.pop)),k=(min(self.batch_sz,len(self.pop)))),:])
+                #pdb.set_trace()
+                #batch=torch.Tensor(self.pop_bds[])
+                #batch=batch/600
+                #batch=batch-0.5
+                #pdb.set_trace()
+                with torch.no_grad():
+                    e_frozen=self.frozen(batch)
+                
+                self.learnt.train()
+                self.optimizer.zero_grad()
+                e_l=self.learnt(batch)
+                ll=(e_l-e_frozen)**2
+                ll=ll.sum(1)
+                weights=torch.Tensor([1/max(1,x._age+1) for x in self.pop])
+                #weights=torch.Tensor([1.0 for x in self.pop])
+                #pdb.set_trace()
+                loss=ll*weights
+                loss=loss.mean()
+                #loss/=self.batch_sz
+                #print(batch)
+                print("loss==",loss.item())
+                if torch.isnan(loss).any():
+                    raise Exception("loss is Nan. Maybe tray reducing the learning rate")
+                loss.backward()
+                self.optimizer.step()
+
         pop_novs=[]
         for i in range(0,self.pop_bds.shape[0],self.batch_sz):
             batch=torch.Tensor(self.pop_bds[i:i+self.batch_sz])
+            #batch=batch/600
+            #batch=batch-0.5
             #pdb.set_trace()
             with torch.no_grad():
                 e_frozen=self.frozen(batch)
                 self.learnt.eval()
                 e_pred=self.learnt(batch)
-                diff=(e_pred-e_frozen).norm(dim=1)
+                diff=(e_pred-e_frozen)**2
+                diff=diff.sum(1)
+                print("loss AFTER==",diff.mean().item())
                 pop_novs+=diff.cpu().detach().tolist()
-            
-            self.learnt.train()
-            self.optimizer.zero_grad()
-            e_l=self.learnt(batch)
-            loss=(e_l-e_frozen).norm()**2
-            loss/=self.batch_sz
-            #print(batch)
-            print("loss==",loss)
-            if torch.isnan(loss).any():
-                raise Exception("loss is Nan. Maybe tray reducing the learning rate")
-            loss.backward()
-            self.optimizer.step()
 
         assert len(pop_novs)==self.pop_bds.shape[0], "that shouldn't happen"
         self.epoch+=1
+        #print("******************************* novs ******************************",[x/sum(pop_novs) for x in sorted(pop_novs)][::-1])
+        print("******************************* novs ******************************",sorted(pop_novs)[::-1])
+
 
         return pop_novs
 

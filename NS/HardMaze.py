@@ -158,6 +158,8 @@ class HardMaze(Problem):
         """
         if quitely and not(len(save_to)):
             raise Exception("quitely=True requires save_to to be an existing directory")
+        #quitely=False
+
         arch_l=list(archive)
         pop_l=list(population)
         uu=arch_l+pop_l
@@ -171,6 +173,9 @@ class HardMaze(Problem):
         z[:,1]=(z[:,1]/real_h)*self.maze_im.shape[0]
         
         maze_im=self.maze_im.copy()
+
+        mean_nov=np.mean([uu[i]._nov for i in range(len(uu))])
+
         for pt_i in range(z.shape[0]): 
             if pt_i<len(arch_l):#archive individuals
                 color=MiscUtils.colors.blue
@@ -180,6 +185,8 @@ class HardMaze(Problem):
                 color=MiscUtils.colors.green
                 #thickness=1
                 thickness=-1
+            if uu[pt_i]._nov > mean_nov:
+                color=MiscUtils.colors.blue
             maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
         maze_im=cv2.circle(maze_im,
