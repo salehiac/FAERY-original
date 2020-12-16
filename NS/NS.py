@@ -209,6 +209,7 @@ class NoveltySearch:
                         x._bd_dist_to_parent_bd=problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
 
             parents=parents_next
+            self.nov_estimator.train(parents)
             if self.archive is not None:
                 self.archive.update(pop, thresh=problem.dist_thresh)
                 if self.save_archive_to_file:

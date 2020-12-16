@@ -124,7 +124,7 @@ class SmallEncoder1d(torch.nn.Module):
         for md in self.mds[:-1]:
             out=self.bn(self.non_lin(md(out)))
 
-        return torch.tanh(self.mds[-1](out))
+        return self.mds[-1](out)
 
     def weights_to_constant(self,cst):
         with torch.no_grad():
