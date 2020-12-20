@@ -296,7 +296,9 @@ if __name__=="__main__":
                     removal_strategy=config["archive"]["removal_strategy"])
         elif config["novelty_estimator"]["type"]=="learned":
             bd_dims=problem.get_bd_dims()
-            embedding_dims=bd_dims
+            #embedding_dims=bd_dims
+            #embedding_dims=1
+            embedding_dims=4
             nov_estimator=NoveltyEstimators.LearnedNovelty1d(in_dim=bd_dims, emb_dim=embedding_dims)
             arch=None
 
@@ -305,11 +307,10 @@ if __name__=="__main__":
             selector=functools.partial(deap_tools.selBest,k=config["hyperparams"]["population_size"])
             #selector=functools.partial(deap_tools.selWorst,k=config["hyperparams"]["population_size"])
             #selector=functools.partial(deap_tools.selNSGA2,k=config["hyperparams"]["population_size"])
-            ##selector=functools.partial(deap_tools.selRoulette,k=config["hyperparams"]["population_size"])
 
 
             #the issue with roulette is that it ends up chosing the same element many times
-            #selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
+            selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
         else:
             raise NotImplementedError("selector")
 

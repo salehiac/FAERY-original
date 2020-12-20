@@ -444,35 +444,28 @@ def load_autoencoder(path, w, h, in_c, emb_sz):
 #            torch.cuda.synchronize()
 #            return self.start.elapsed_time(self.end)
 #
-def selRoulette(individuals, k, fit_attr=None):
+def selRoulette(individuals, k, fit_attr=None, automatic_threshold=True):
     """
-    taken from deap 
-    
-    Select *k* individuals from the input *individuals* using *k*
-    spins of a roulette. The selection is made by looking only at the first
-    objective of each individual. The list returned contains references to
-    the input *individuals*.
-    :param individuals: A list of individuals to select from.
-    :param k: The number of individuals to select.
-    :param fit_attr: The attribute of individuals to use as selection criterion
-    :returns: A list of selected individuals.
-    This function uses the :func:`~random.random` function from the python base
-    :mod:`random` module.
-    .. warning::
-       The roulette selection by definition cannot be used for minimization
-       or when the fitness can be smaller or equal to 0.
+    Based on the deap function of the same name, but adapted to novelty with more complex behavior. The fit_attr argument is never used, but is here
+    for retro-compatibility issues
     """
 
-    s_inds = sorted(individuals, key=lambda x:x._nov, reverse=True)
-    sum_fits = sum(getattr(ind, "_nov") for ind in individuals)
+    individual_novs=[x._nov for x in individuals]
+   
+    if automatic_threshold:
+        md=np.median(individual_novs)
+        individual_novs=list(map(lambda x: x if x>md else 0, individual_novs))
+
+    s_indx=np.argsort(individual_novs).tolist()[::-1]#decreasing order
+    sum_n = sum(individual_novs)
     chosen = []
     for i in range(k):
-        u = random.random() * sum_fits
+        u = random.random() * sum_n
         sum_ = 0
-        for ind in s_inds:
-            sum_ += getattr(ind, "_nov")
+        for idx in s_indx:
+            sum_ += individual_novs[idx]
             if sum_ > u:
-                chosen.append(ind)
+                chosen.append(individuals[idx])
                 break
 
     return chosen
