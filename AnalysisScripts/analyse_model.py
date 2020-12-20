@@ -52,10 +52,13 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     """
     root_dir      directory of an NS experiment (NS_log_{pid}), expected to contain frozen_net.model and learnt_{i}.model for i in range(200)
     """
-    
+  
+    if bn_was_used:
+        raise Exception("bn doesn't make sense 1) for frozen, it will modify it's behavior 2) for the other one, not sure but seems like it will hinder convergence")
+
     frozen_net_path=root_dir+"/frozen_net.model"
     #learned_model_generations=list(range(0,45,10))
-    learned_model_generations=list(range(0,1))
+    learned_model_generations=list(range(0,400,10))
     #learned_model_generations=list(range(0,20))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     #print(learned_models_paths)
@@ -83,7 +86,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     for i in range(num_non_frozen):
         model=MiscUtils.SmallEncoder1d(in_dim,
                 out_dim,
-                num_hidden=3,
+                num_hidden=5,
                 non_lin=non_lin_type,
                 use_bn=bn_was_used)
         model.load_state_dict(torch.load(learned_models_paths[i]))
@@ -125,10 +128,10 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     
    
     #pdb.set_trace()
-    results_np=np.concatenate(results,1)
-    plt.imshow(results_np)
-    plt.show()
-    pdb.set_trace()
+    #results_np=np.concatenate(results,1)
+    #plt.imshow(results_np)
+    #plt.show()
+    #pdb.set_trace()
     
     
     uniform_distrib=distrib_utils.uniform_like(results[0])
@@ -154,7 +157,7 @@ def evolution_of_age_and_parent_child_distances(root_dir):
         with open(fn,"rb") as f:
             pop=pickle.load(f)
 
-        pdb.set_trace()
+        #pdb.set_trace()
         ages.append(np.mean([gen-indv._created_at_gen for indv in pop])) 
         dists.append(np.mean([indv._bd_dist_to_parent_bd for indv in pop]))
 
@@ -164,8 +167,8 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 if __name__=="__main__":
 
     JS_SINGLE_DIRETORY=False
-    JS_MULTIPLE_DIRECTORIES=True
-    AGE_AND_DISTANCE_TO_PARENT=False
+    JS_MULTIPLE_DIRECTORIES=False
+    AGE_AND_DISTANCE_TO_PARENT=True
     
     if JS_SINGLE_DIRETORY:
         js=see_evolution_of_learned_novelty_distribution_hardmaze(sys.argv[1], bn_was_used=True, non_lin_type="leaky_relu", in_dim=2, out_dim=2)
@@ -180,10 +183,13 @@ if __name__=="__main__":
         
         Experiment=namedtuple("Experiment","path uses_bn non_lin_type in_dim out_dim")
        
-        root="/tmp/"
+        #root="/tmp/"
         #NS_log_3351
         #list_of_experiments=[Experiment(root+"/NS_log_3351", False, "tanh", 2, 2)]
-        list_of_experiments=[Experiment(root+"/NS_log_67927", True, "leaky_relu", 2, 2)]
+        #list_of_experiments=[Experiment(root+"/NS_log_67927", True, "leaky_relu", 2, 2)]
+        
+        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/"
+        list_of_experiments=[Experiment(root+"/NS_log_43734/", False, "leaky_relu", 2, 4)]
 
         #list_of_experiments=[Experiment(root+"/exp_1/NS_log_4735", False, "tanh", 2, 2),
         #        Experiment(root+"/NS_log_48482/", True, "leaky_relu", 2 ,2 ),
@@ -236,11 +242,11 @@ if __name__=="__main__":
 
 
         
-        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze_8ddescr/"
-        list_of_experiments=[root+"NS_log_103925/",
-                root+"NS_log_119372/",
-                root+"NS_log_63774/",
-                root+"NS_log_69984/"]
+        #root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze_8ddescr/"
+        #list_of_experiments=[root+"NS_log_103925/",
+        #        root+"NS_log_119372/",
+        #        root+"NS_log_63774/",
+        #        root+"NS_log_69984/"]
                 #root+"NS_log_71510/",
                 #root+"NS_log_72894/",
                 #root+"NS_log_76509/",
@@ -267,6 +273,9 @@ if __name__=="__main__":
         #        root+"/NS_log_34345/",
         #        root+"/NS_log_36944/",
         #        root+"/NS_log_39017/"]
+
+        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/"
+        list_of_experiments=[root+"/NS_log_43734/"]
 
 
 

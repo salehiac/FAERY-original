@@ -298,7 +298,7 @@ if __name__=="__main__":
             bd_dims=problem.get_bd_dims()
             #embedding_dims=bd_dims
             #embedding_dims=1
-            embedding_dims=4
+            embedding_dims=2*bd_dims
             nov_estimator=NoveltyEstimators.LearnedNovelty1d(in_dim=bd_dims, emb_dim=embedding_dims)
             arch=None
 
