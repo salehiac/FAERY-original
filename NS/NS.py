@@ -216,6 +216,7 @@ class NoveltySearch:
                     self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+            #self.problem.visualise_bds(parents, offsprings, quitely=True, save_to=self.log_dir_path )
             MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents)
             
             if len(task_solvers):
@@ -304,13 +305,10 @@ if __name__=="__main__":
 
         #create selector
         if config["selector"]["type"]=="elitist":
-            selector=functools.partial(deap_tools.selBest,k=config["hyperparams"]["population_size"])
-            #selector=functools.partial(deap_tools.selWorst,k=config["hyperparams"]["population_size"])
-            #selector=functools.partial(deap_tools.selNSGA2,k=config["hyperparams"]["population_size"])
-
 
             #the issue with roulette is that it ends up chosing the same element many times
-            selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
+            #selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
+            selector=functools.partial(MiscUtils.selBest,k=config["hyperparams"]["population_size"])
         else:
             raise NotImplementedError("selector")
 

@@ -183,10 +183,11 @@ class HardMaze(Problem):
             else:#population individuals
                 #pdb.set_trace()
                 color=MiscUtils.colors.green
-                #thickness=1
                 thickness=-1
+                #thickness=-1
             if uu[pt_i]._nov > mean_nov:
-                color=MiscUtils.colors.blue
+                #color=MiscUtils.colors.blue
+                thickness=1
             maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
         maze_im=cv2.circle(maze_im,

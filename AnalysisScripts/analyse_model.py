@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import pdb
+import os
 
 import scipy.stats as stats
 import scipy.special
@@ -18,6 +19,10 @@ sys.path.append("..")
 from NS import MiscUtils
 #from NS.Agents import Agent
 #from NS import Agents
+
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 
 
 import distrib_utils
@@ -274,9 +279,9 @@ if __name__=="__main__":
         #        root+"/NS_log_36944/",
         #        root+"/NS_log_39017/"]
 
-        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/"
-        list_of_experiments=[root+"/NS_log_43734/"]
-
+        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/"
+        list_of_experiments=os.listdir(root)
+        list_of_experiments=[root+"/"+x for x in list_of_experiments]
 
 
         age_evolutions=[]
@@ -296,7 +301,26 @@ if __name__=="__main__":
         m_bd=bd_dist_to_parent_evolutions.max(0)
         std_bd=bd_dist_to_parent_evolutions.std(0)
         
-        MiscUtils.plot_with_std_band(range(len(m_age)),m_age,std_age**2)
-        MiscUtils.plot_with_std_band(range(len(m_bd)),m_bd,std_bd**2)
+        MiscUtils.plot_with_std_band(range(len(m_age)),m_age,std_age,color="blue",hold_on=True,label="BR-NS")
+        plt.xticks(fontsize=28)
+        plt.yticks(fontsize=28)
+        plt.xlabel("generations",fontsize=28)
+        plt.ylabel("mean population age",fontsize=28)
+        if 1:
+            archive_age=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/hardmaze_archived_based_2d_age_evolution.npy")
+            MiscUtils.plot_with_std_band(range(len(m_age)),archive_age.mean(0),archive_age.std(0),color="red",hold_on=False,label="Archive-based NS (size=10000)")
 
+
+        MiscUtils.plot_with_std_band(range(len(m_bd)),m_bd,std_bd,color="blue",hold_on=True,label="BR-NS")
+        plt.xticks(fontsize=28)
+        plt.yticks(fontsize=28)
+        plt.xlabel("generations",fontsize=28)
+        plt.ylabel("mean distance to parent in behavior space",fontsize=28)
+        plt.legend(fontsize=28)
+        if 1:
+            archive_bd_dist_to_par=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/hardmaze_archived_based_2d_parent_offspring_dist_evolution.npy")
+            MiscUtils.plot_with_std_band(range(len(m_age)),archive_bd_dist_to_par.mean(0),archive_bd_dist_to_par.std(0),color="red",hold_on=False,label="Archive-based NS (size=10000)")
+
+
+       
 

@@ -67,17 +67,18 @@ def create_directory_with_pid(dir_basename,remove_if_exists=True,no_pid=False):
         fl.write("created on "+get_current_time_date()+"\n")
     return dir_path
 
-def plot_with_std_band(x,y,std,color="red",hold_on=False):
+def plot_with_std_band(x,y,std,color="red",hold_on=False,label=None):
     """
     x    np array of size N
     y    np array of size N
     std  np array of size N
     """
-    plt.plot(x, y, '-', color='gray')
+    plt.plot(x, y, '-', color=color,label=label)
     plt.fill_between(x, y-std, y+std,
                  color=color, alpha=0.2)
 
     if not hold_on:
+        plt.legend(fontsize=28)
         plt.show()
 
 def dump_pickle(fn, obj):
@@ -88,6 +89,8 @@ class colors:
     red=(255,0,0)
     green=(0,255,0)
     blue=(0,0,255)
+    yellow=(255,255,51)
+
 
 _non_lin_dict={"tanh":torch.tanh, "relu": torch.relu, "sigmoid": torch.sigmoid, "selu": torch.selu, "leaky_relu":torch.nn.functional.leaky_relu}
 def identity(x):
@@ -465,10 +468,26 @@ def selRoulette(individuals, k, fit_attr=None, automatic_threshold=True):
         for idx in s_indx:
             sum_ += individual_novs[idx]
             if sum_ > u:
-                chosen.append(individuals[idx])
+                chosen.append(copy.deepcopy(individuals[idx]))
                 break
 
     return chosen
+
+def selBest(individuals,k,fit_attr=None,automatic_threshold=True):
+   
+    individual_novs=[x._nov for x in individuals]
+
+    if automatic_threshold:
+        md=np.median(individual_novs)
+        individual_novs=list(map(lambda x: x if x>md else 0, individual_novs))
+
+    s_indx=np.argsort(individual_novs).tolist()[::-1]#decreasing order
+    return [individuals[i] for i in s_indx[:k]]
+    
+
+
+
+
 
 if __name__=="__main__":
 

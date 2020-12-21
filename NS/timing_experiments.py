@@ -18,10 +18,10 @@ if __name__=="__main__":
     bd_size_range=[2,4,8,16,32,64]
     for descr_dim in bd_size_range:
     
-        num_gens=15
+        num_gens=100
         
         pop_sz=100 #note that in archive-based methods, nearest neighbours should be found for both population and archive
-        emb_dim=descr_dim
+        emb_dim=descr_dim*4
         pop_bds=torch.rand(pop_sz,descr_dim)
         
         frozen=MiscUtils.SmallEncoder1d(descr_dim,
@@ -67,10 +67,10 @@ if __name__=="__main__":
                 for batch_i in range(0,pop_bds.shape[0],batch_sz):
                     batch=torch.Tensor(pop_bds[batch_i:batch_i+batch_sz])
 
-                    with torch.no_grad():
-                        e_frozen=frozen(pop_bds)
-                        e_pred=learnt(pop_bds)
-                        nov=(e_pred-e_frozen).norm(dim=1)
+                    #with torch.no_grad():
+                    #    e_frozen=frozen(pop_bds)
+                    #    e_pred=learnt(pop_bds)
+                    #    nov=(e_pred-e_frozen).norm(dim=1)
                    
                     if 1:
                         optimizer.zero_grad()

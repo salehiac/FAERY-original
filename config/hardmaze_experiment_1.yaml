@@ -30,7 +30,7 @@ population:
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root_tmp: "/tmp/"
-ns_log_root: "/home/achkan//misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/" #directory where NS will create a log directory based on its main pid
+ns_log_root: "/home/achkan//misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/" #directory where NS will create a log directory based on its main pid
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
 compute_parent_child_stats: 1 # 0 or 1
