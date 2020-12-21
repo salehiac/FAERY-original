@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<fastsim>
+  <display enable="true"/>
+  <!-- world -->
+  <map name="arena.pbm" size="600"/>
+
+<!-- /!\ WARNING /!\ The robot "diameter" is actually a radius ! --> 
+  <robot x="60" y="450" theta="45" diameter="10"/> <!-- Start pos : 0.1*size, 0.1*size, pi/4 -->
+	
+  <goal x="60" y="60" color="0" diameter="7"/> <!-- Goal pos :0.1*size, 0.75*size -->
+
+  <light_sensor angle="0" color="0" angular_range="30"/>
+  <light_sensor angle="-30" color="0" angular_range="30"/>
+  <light_sensor angle="-60" color="0" angular_range="30"/>
+  <light_sensor angle="-90" color="0" angular_range="30"/>
+  <light_sensor angle="30" color="0" angular_range="30"/>
+  <light_sensor angle="60" color="0" angular_range="30"/>
+  <light_sensor angle="90" color="0" angular_range="30"/>
+
+  <light_sensor angle="0" color="1" angular_range="30"/>
+  <light_sensor angle="-30" color="1" angular_range="30"/>
+  <light_sensor angle="-60" color="1" angular_range="30"/>
+  <light_sensor angle="-90" color="1" angular_range="30"/>
+  <light_sensor angle="30" color="1" angular_range="30"/>
+  <light_sensor angle="60" color="1" angular_range="30"/>
+  <light_sensor angle="90" color="1" angular_range="30"/>
+  
+  <!-- sensors -->
+  <laser range="200" angle="60"/>
+  <laser range="200" angle="40"/>
+  <laser range="200" angle="20"/>
+  <laser range="200" angle="0"/>
+  <laser range="200" angle="-20"/>
+  <laser range="200" angle="-40"/>
+  <laser range="200" angle="-60"/>
+<!--   <radar slices="4" color="0"/>   radar disabled for now-->
+</fastsim>
