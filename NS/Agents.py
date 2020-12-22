@@ -106,7 +106,8 @@ class SmallFC_FW(torch.nn.Module, Agent):
             num_hidden=3,
             hidden_dim=10,
             non_lin="tanh",
-            use_bn=False):
+            use_bn=False,
+            output_normalisation=""):
         torch.nn.Module.__init__(self)
         Agent.__init__(self)
 
@@ -120,6 +121,8 @@ class SmallFC_FW(torch.nn.Module, Agent):
         self.non_lin=_non_lin_dict[non_lin] 
         self.bn=torch.nn.BatchNorm1d(hidden_dim) if use_bn else _identity
 
+        self.output_normaliser=_non_lin_dict[output_normalisation] if output_normalisation else _identity
+
 
     def forward(self, x, return_numpy=True):
         """
@@ -129,6 +132,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
         for md in self.mds[:-1]:
             out=self.bn(self.non_lin(md(out)))
         out=self.mds[-1](out)
+        out=self.output_normaliser(out)
         return out.detach().cpu().numpy() if return_numpy else out
 
     def get_flattened_weights(self):

@@ -21,6 +21,8 @@ import numpy as np
 import MiscUtils
 import torch
 
+import pdb
+
 class BehaviorDescr:
     """
     Mapping between meta-data and behavior space. Also specifies a metric.
@@ -62,8 +64,11 @@ class GenericBD(BehaviorDescr):
         assert trajectory.shape[1]>=vec.shape[1], "not enough dims to extract"
         M=trajectory.shape[0]
         N=vec.shape[0]
-        inds=list(range(M-1,-1,-M//N))
+        rem=M%N
+        inds=list(range(M-1,rem-1,-(M//N)))
         vec=trajectory[inds,:self.dims]
+
+        assert len(inds)==self.num, "wrong number of samples, this shouldn't happen"
 
         return vec
 

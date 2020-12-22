@@ -41,7 +41,9 @@ class LargeAntMaze(Problem):
         """
         super().__init__()
         xml_path=assets["env_xml"]
-        self.env=ant=AntObstaclesBigEnv(xml_path=xml_path)
+        self.env=AntObstaclesBigEnv(xml_path=xml_path)
+
+        #display=True
         
         self.dim_obs=self.env.observation_space.shape[0]
         self.dim_act=self.env.action_space.shape[0]
@@ -53,8 +55,10 @@ class LargeAntMaze(Problem):
 
         self.max_steps=max_steps
 
-        self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=10)#dims=2 for position, no orientation, num is number of samples. the behavior_descriptor will be dims*num dimensional
+        self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=16)#dims=2 for position, no orientation, num is number of samples. the behavior_descriptor will be dims*num dimensional
         self.dist_thresh=1 
+                
+        self.num_gens=0
 
     def close(self):
         self.env.close()
@@ -80,22 +84,26 @@ class LargeAntMaze(Problem):
         fitness=0
         behavior_info=[]
         solved_tasks=[0]*len(self.env.goals)
-        solved=True
+        solved=False
         for step_i in range(self.max_steps):
             if self.display:
                 self.env.render()
 
-            #print(self.env.ts)
             action=ag(obs)
             action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
             obs, _ , ended, info=self.env.step(action)
             last_position=np.array([info["x_position"],info["y_position"]])
             behavior_info.append(last_position.reshape(1,2))
 
+            #if info["is_stuck"]:
+            #    print("Ant got stuck at step ",step_i)
+            #    #pdb.set_trace()
+
             for t_idx in range(len(self.env.goals)):
                 task=self.env.goals[t_idx]
+                #print(task.solved_by(last_position))
                 solved_tasks[t_idx]= solved_tasks[t_idx]  or task.solved_by(last_position)
-            
+           
             if all(solved_tasks):
                 solved=True
                 ended=True
@@ -104,9 +112,8 @@ class LargeAntMaze(Problem):
 
             if ended:
                 break
-       
         behavior_info=np.concatenate(behavior_info,0)
-        bd=self.bd_extractor.extract_behavior(behavior_info).flatten()
+        bd=self.bd_extractor.extract_behavior(behavior_info).flatten().reshape(1,-1)
         #pdb.set_trace()
 
         return fitness, bd, solved
@@ -115,12 +122,27 @@ class LargeAntMaze(Problem):
         """
         for now archive is ignored
         """
-        bds=[x._behavior_descr for x in population]
+        bds=[x._behavior_descr.reshape(self.bd_extractor.num,self.bd_extractor.dims) for x in population]
+        novs=[x._nov for x in population]
+        sorted_by_nov=np.argsort(novs)[::-1]#most novel to least novel
+
+        to_plot=sorted_by_nov[:3]
         for i in range(len(bds)):
-            plt.plot(bds[:,0],bds[:,1])
-            plt.xlim(-45,45)
-            plt.ylim(-45,45)
-            plt.show()
+            if i in to_plot:
+                for j in range(len(self.env.goals)):
+                    goal_j=self.env.goals[j]
+                    plt.plot(goal_j.coords[0],goal_j.coords[1],color=goal_j.color,marker="s",linestyle="")
+                #pdb.set_trace()
+                plt.plot(bds[i][:,0],bds[i][:,1],"k")
+                plt.xlim(-45,45)
+                plt.ylim(-45,45)
+                if not quitely:
+                    plt.show()
+                else:
+                    plt.savefig(save_to+f"/large_ant_bd_gen_{self.num_gens}_individual_{i}.png")
+
+                plt.close()
+        self.num_gens+=1
 
 
 if __name__=="__main__":
@@ -132,7 +154,7 @@ if __name__=="__main__":
     if test_scoop:
         lam=LargeAntMaze(bd_type="generic",
                 max_steps=500,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
-                display=False,
+                display=True,
                 assets={"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"})
         
         num_agents=10

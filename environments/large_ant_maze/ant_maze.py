@@ -11,6 +11,10 @@ from gym.envs.mujoco import mujoco_env
 from gym.utils import seeding
 
 #from collections import namedtuple
+from collections import deque
+
+from functools import reduce
+
 
 class GoalArea:
     def __init__(self, 
@@ -42,10 +46,16 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         self.max_ts = max_ts
         self.xml_path=xml_path
+        self.ts=0
+        self._obs_hist=deque(maxlen=30)#to check if the ant is stuck
+
+
         mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=5)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
         utils.EzPickle.__init__(self, xml_path, max_ts)
 
-        self.ts=0
+        #note: don't add members after the call to MujocoEnv.__init__ as it seems to call step
+
+        
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -61,16 +71,23 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.do_simulation(a, self.frame_skip)
         planar_position=self.data.qpos[:2]
         
-        time_out = False
+        end_episode = False
         if self.ts > self.max_ts:
-            time_out = True
+            end_episode = True
         self.ts+=1
 
         reward=0#we only want to use pure exploration
         ob = self._get_obs()
+
+        self._obs_hist.append(ob)
+        is_stuck=False
+        if len(self._obs_hist)==self._obs_hist.maxlen and np.linalg.norm(reduce(lambda x,y: y-x,self._obs_hist,0))<0.5:
+            is_stuck=True
+            end_episode=True
         
-        return ob, reward, time_out, dict(x_position=planar_position[0],
-                                      y_position=planar_position[1])
+        return ob, reward, end_episode, dict(x_position=planar_position[0],
+                                      y_position=planar_position[1],
+                                      is_stuck=is_stuck)
                                       
 
     def _get_obs(self):

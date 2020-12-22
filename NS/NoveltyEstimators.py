@@ -136,8 +136,8 @@ class LearnedNovelty1d(NoveltyEstimator):
             batch=torch.Tensor(self.pop_bds[i:i+self.batch_sz])
             #batch=batch/600
             #batch=batch-0.5
-            #pdb.set_trace()
             with torch.no_grad():
+                #pdb.set_trace()
                 e_frozen=self.frozen(batch)
                 self.learnt.eval()
                 e_pred=self.learnt(batch)
@@ -180,7 +180,7 @@ class LearnedNovelty1d(NoveltyEstimator):
                 ll=(e_l-e_frozen)**2
                 ll=ll.sum(1)
                 #weights=torch.Tensor([1/max(1,x._age+1) for x in pop])
-                weights=torch.Tensor([1.0 for x in pop])
+                weights=torch.Tensor([1.0 for x in range(batch.shape[0])])
                 #pdb.set_trace()
                 loss=ll*weights
                 loss=loss.mean()

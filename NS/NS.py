@@ -323,12 +323,22 @@ if __name__=="__main__":
         out_dims=problem.dim_act
         num_pop=config["hyperparams"]["population_size"]
         if config["population"]["individual_type"]=="simple_fw_fc":
+            
+            normalise_output_with="" 
+            num_hidden=3
+            hidden_dim=10
+            if "large_ant_maze"==config["problem"]["name"]:
+                normalise_output_with="tanh"
+                num_hidden=4
+                hidden_dim=10
+
             def make_ag():
                 return Agents.SmallFC_FW(in_d=in_dims,
-                    out_d=out_dims,
-                    num_hidden=3,
-                    hidden_dim=10)
-        
+                        out_d=out_dims,
+                        num_hidden=num_hidden,
+                        hidden_dim=hidden_dim,
+                        output_normalisation=normalise_output_with)
+
         
         # create mutator
         mutator_type=config["mutator"]["type"]
