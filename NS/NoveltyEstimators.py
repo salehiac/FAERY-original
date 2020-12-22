@@ -100,7 +100,7 @@ class LearnedNovelty1d(NoveltyEstimator):
             emb_dim,
             num_hidden=3,
             non_lin="leaky_relu",
-            use_bn=False)
+            use_bn=False)#note that using batchnorm wouldn't make any sense here as the results of the frozen network shouldn't change depending on batch
         #self.frozen.weights_to_constant(1.0)
         #self.frozen.weights_to_rand(d=0.2)
         self.frozen.eval()

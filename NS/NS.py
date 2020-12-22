@@ -284,6 +284,12 @@ if __name__=="__main__":
             assets=config["problem"]["assets"]
             import HardMaze
             problem=HardMaze.HardMaze(bd_type=bd_type,max_steps=max_steps, assets=assets)
+        elif config["problem"]["name"]=="large_ant_maze":
+            max_steps=config["problem"]["max_steps"]
+            bd_type=config["problem"]["bd_type"]
+            assets=config["problem"]["assets"]
+            import LargeAntMaze
+            problem=LargeAntMaze.LargeAntMaze(bd_type=bd_type, max_steps=max_steps, assets=assets)
         else:
             raise NotImplementedError("Problem type")
 

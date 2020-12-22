@@ -106,7 +106,7 @@ class LargeAntMaze(Problem):
                 break
        
         behavior_info=np.concatenate(behavior_info,0)
-        bd=self.bd_extractor.extract_behavior(behavior_info)
+        bd=self.bd_extractor.extract_behavior(behavior_info).flatten()
         #pdb.set_trace()
 
         return fitness, bd, solved

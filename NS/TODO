@@ -1,6 +1,10 @@
 
 ATTENTION!!!!!
 
+note that batchnorm doesn't make sense for the frozen encoder as its result MUST be frozen. Batchnorm will change them depending on the batch
+
+ATTENTION!!!!!
+
 The analysis tools have been tailored to 2d behaviors (the batch given is 600x2, where the second dim is the dimension of descriptors and 600 the number of vertical samples)
 
 ==> remedy that!
