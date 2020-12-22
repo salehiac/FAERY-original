@@ -59,7 +59,7 @@ class Dummy(torch.nn.Module, Agent):
         self.out_d=out_d
 
     def forward(self, x):
-        return torch.rand(1,self.out_d)[0,:].tolist()
+        return torch.randn(1,self.out_d)[0,:].tolist()
 
     def get_flattened_weights(self):
         pass

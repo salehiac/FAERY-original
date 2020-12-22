@@ -20,6 +20,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import sys
 import pdb
 
 import gym
@@ -31,32 +32,29 @@ import BehaviorDescr
 import MiscUtils
 from Problem import Problem
 
+sys.path.append("..")
+from environments.large_ant_maze.ant_maze import AntObstaclesBigEnv
 
-class LargAntMaze(Problem):
-    def __init__(self, bd_type="generic", max_steps=1000, display=False, assets={}):
+class LargeAntMaze(Problem):
+    def __init__(self, bd_type="generic", max_steps=2000, display=False, assets={}):
         """
         """
         super().__init__()
-        self.dim_obs=len(self.env.reset())
+        xml_path=assets["env_xml"]
+        self.env=ant=AntObstaclesBigEnv(xml_path=xml_path)
+        
+        self.dim_obs=self.env.observation_space.shape[0]
         self.dim_act=self.env.action_space.shape[0]
         self.display= display
     
         if(display):
-            self.env.enable_display()
+            self.env.render()
             print(colored("Warning: you have set display to True, makes sure that you have launched scoop with -n 1", "magenta",attrs=["bold"]))
 
         self.max_steps=max_steps
 
-        self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=1)#dims=2 for position, no orientation, num is number of samples (here we take the last point in the trajectory)
-        self.dist_thresh=1 #(norm, in pixels) minimum distance that a point x in the population should have to its nearest neighbour in the archive+pop
-                               #in order for x to be considerd novel
-        
-
-        #self.maze_im=cv2.imread(assets["env_im"]) if len(assets) else None
-        self.num_saved=0
-
-
-        #self._debug_counter=0
+        self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=10)#dims=2 for position, no orientation, num is number of samples. the behavior_descriptor will be dims*num dimensional
+        self.dist_thresh=1 
 
     def close(self):
         self.env.close()
@@ -65,64 +63,64 @@ class LargAntMaze(Problem):
         return self.bd_extractor.get_bd_dims()
 
     def __call__(self, ag):
+        """
+        evaluates the agent
+        returns 
+            fitness   whether the agent solved the task
+            bd        behavior descriptor
+            solved    same as fitness, but boolean
+        """
         #print("evaluating agent ", ag._idx)
 
         if hasattr(ag, "eval"):#in case of torch agent
             ag.eval() 
 
+        obs=self.env.reset()
 
-        task_solved=False
-        for i in range(self.max_steps):
+        fitness=0
+        behavior_info=[]
+        solved_tasks=[0]*len(self.env.goals)
+        solved=True
+        for step_i in range(self.max_steps):
             if self.display:
                 self.env.render()
-                time.sleep(0.01)
-            
+
+            #print(self.env.ts)
             action=ag(obs)
             action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
-            obs, reward, ended, info=self.env.step(action)
-            fitness+=reward
-            if self.bd_type=="generic":
-                behavior_info.append(info["robot_pos"])
-            elif self.bd_type=="learned" or self.bd_type=="learned_frozen":
-                z=info["robot_pos"][:2]
-                #scale to im size
-                real_w=self.env.map.get_real_w()
-                real_h=self.env.map.get_real_h()
-                z[0]=(z[0]/real_w)*behavior_info.shape[1]
-                z[1]=(z[1]/real_h)*behavior_info.shape[0]
-        
-                behavior_info=cv2.circle(behavior_info, (int(z[0]),int(z[1])) , 2, (255,0,0), thickness=-1)
-            
-            #check if task solved
-            dist_to_goal=np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()]))
-            if dist_to_goal < self.goal_radius:
-                task_solved=True
-                ended=True
-                break#otherwise the robot might move away from the goal
-           
+            obs, _ , ended, info=self.env.step(action)
+            last_position=np.array([info["x_position"],info["y_position"]])
+            behavior_info.append(last_position.reshape(1,2))
 
+            for t_idx in range(len(self.env.goals)):
+                task=self.env.goals[t_idx]
+                solved_tasks[t_idx]= solved_tasks[t_idx]  or task.solved_by(last_position)
+            
+            if all(solved_tasks):
+                solved=True
+                ended=True
+                fitness=1
+                break
 
             if ended:
                 break
-     
-        #cv2.imwrite(f"/tmp/meta_observation_samples/obs_{ag._idx}.png", behavior_info)
-        #self._debug_counter+=1
-
-        bd=None
-        if isinstance(self.bd_extractor, BehaviorDescr.GenericBD):
-            bd=self.bd_extractor.extract_behavior(np.array(behavior_info).reshape(len(behavior_info), len(behavior_info[0]))) 
-        elif self.bd_type=="learned" or self.bd_type=="learned_frozen":
-            bd=self.bd_extractor.extract_behavior(behavior_info)
-            if task_solved:
-                cv2.imwrite("/tmp/solution.png", behavior_info)
+       
+        behavior_info=np.concatenate(behavior_info,0)
+        bd=self.bd_extractor.extract_behavior(behavior_info)
         #pdb.set_trace()
-        return fitness, bd, task_solved
+
+        return fitness, bd, solved
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """
-
+        for now archive is ignored
         """
-        pass
+        bds=[x._behavior_descr for x in population]
+        for i in range(len(bds)):
+            plt.plot(bds[:,0],bds[:,1])
+            plt.xlim(-45,45)
+            plt.ylim(-45,45)
+            plt.show()
 
 
 if __name__=="__main__":
@@ -132,12 +130,16 @@ if __name__=="__main__":
     #test_scoop=False
 
     if test_scoop:
-        hm=HardMaze(bd_type="generic",max_steps=2000,display=False)
-        num_agents=100
-        random_pop=[Agents.Dummy(in_d=5, out_d=2, out_type="list") for i in range(num_agents)]
+        lam=LargeAntMaze(bd_type="generic",
+                max_steps=500,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
+                display=False,
+                assets={"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"})
+        
+        num_agents=10
+        random_pop=[Agents.Dummy(in_d=lam.dim_obs, out_d=lam.dim_act, out_type="list") for i in range(num_agents)]
         
         t1=time.time()
-        results=list(futures.map(hm, random_pop))
+        results=list(futures.map(lam, random_pop))
         t2=time.time()
         print("time==",t2-t1,"secs")#on my machine with 24 cores, I get a factor of about 5x when using all cores instead of just one
 

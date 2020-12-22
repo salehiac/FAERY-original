@@ -32,7 +32,7 @@ class GoalArea:
         return self.dist(x) < self.ray
 
 class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self,max_ts=5000):
+    def __init__(self, xml_path, max_ts=5000):
         self.ts = 0
         self.goals=[
                 GoalArea(np.array([34,-25]),"yellow", 5),
@@ -41,9 +41,11 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                 GoalArea(np.array([4,-24]),"green", 5)]
 
         self.max_ts = max_ts
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        mujoco_env.MujocoEnv.__init__(self, os.path.join(dir_path, 'xmls/ant_obstaclesbig2.xml'), 5)
-        utils.EzPickle.__init__(self)
+        self.xml_path=xml_path
+        mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=5)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
+        utils.EzPickle.__init__(self, xml_path, max_ts)
+
+        self.ts=0
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -62,6 +64,7 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         time_out = False
         if self.ts > self.max_ts:
             time_out = True
+        self.ts+=1
 
         reward=0#we only want to use pure exploration
         ob = self._get_obs()
@@ -93,15 +96,22 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.viewer.opengl_context.set_buffer_size(4024, 4024)
 
 if __name__=="__main__":
-    ant=AntObstaclesBigEnv()
+    xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"
+    ant=AntObstaclesBigEnv(xml_path=xml_abs_path,max_ts=1000)
 
+    obs=ant.reset()
     for i in range(10000):
         ant.render()
         action=ant.action_space.sample()#action is 8d, apparently
         obs, rew, is_done, info=ant.step(action)
-        print(obs)
-        print(rew)
-        print("is_done==",is_done)
-        print(info)
+        print("ant time steps ==" ,ant.ts)
+        if is_done:
+            break
+        #if i and i%1000==0:
+        #    ant.reset()
+        #print(obs)
+        #print(rew)
+        #print("is_done==",is_done)
+        #print(info)
 
     
