@@ -23,7 +23,7 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 def check_cover_deceptive_maze(root_dir,
         num_gens_to_check=400,
-        G=6,
+        G=5,
         h=600,
         w=600):
     """
@@ -85,30 +85,41 @@ if __name__=="__main__":
         for ex in experiments:
             print("ex==",ex)
             im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=400)
-            plt.imshow(im)
-            plt.show()
+            #plt.imshow(im)
+            #plt.show()
             print(cover_hist[-1])
             evolutions.append(cover_hist)
         
         evolutions=np.array(evolutions)#size num_experiments*generations_sampled
-   
-        e_m=evolutions.mean(0) 
-        e_std=evolutions.std(0) 
-        MiscUtils.plot_with_std_band(range(e_m.shape[0]), e_m, e_std**2,hold_on=True,color="blue")
-        plt.xticks(fontsize=28)
-        plt.yticks(fontsize=28)
-        plt.xlabel("generation", fontsize=28)
-        plt.ylabel("coverage", fontsize=28)
-
-    if 1:#checkout archive-based files computed on distant server
-        #archive_based_10x10=np.load("ev_mat.npy")
         
-        archive_based_6x6=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/coverage_6x6.npy")
+        if 1:#add learned novelty coverage info computed on distant server
+            evolutions_1=np.load("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/coverage_6x6_hardmaze_2d_learned_nov_part_1.npy")
+            evolutions=np.concatenate([evolutions, evolutions_1],0)
 
-        a_m=archive_based_6x6.mean(0)
-        a_s=archive_based_6x6.std(0)
-        MiscUtils.plot_with_std_band(range(a_m.shape[0]),a_m,a_s,color="red")
 
+
+        #e_m=evolutions.mean(0) 
+        e_m=np.median(evolutions,0)
+        e_std=evolutions.std(0) 
+        MiscUtils.plot_with_std_band(range(e_m.shape[0]), e_m, e_std**2,hold_on=True,color="blue",label="BR-NS")
+        plt.xticks(fontsize=28);plt.yticks(fontsize=28);plt.xlabel("generation", fontsize=28);plt.ylabel("coverage", fontsize=28)
+        plt.legend(fontsize=28)
+
+   
+    if 1:#checkout archive-based files computed on distant server
+        
+        archive_based_6x6_200=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/coverage_6x6_hardmaze_2d_archive_based_arch_size_200.npy")
+
+        #a_m_200=archive_based_6x6_200.mean(0)
+        a_m_200=np.median(archive_based_6x6_200,0)
+        a_s_200=archive_based_6x6_200.std(0)
+        MiscUtils.plot_with_std_band(range(a_m_200.shape[0]),a_m_200,a_s_200**2,color="red",hold_on=False,label="Archive-based NS")
+
+        #archive_based_6x6_10000=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/coverage_6x6_hardmaze_2d_archive_based_arch_size_10000.npy")
+        #a_m_10000=archive_based_6x6_10000.mean(0)
+        #a_s_10000=archive_based_6x6_10000.std(0)
+        #MiscUtils.plot_with_std_band(range(a_m_10000.shape[0]),a_m_10000,a_s_10000,color="orange",hold_on=False)
+    
 
 
 

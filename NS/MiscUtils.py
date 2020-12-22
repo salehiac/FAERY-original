@@ -73,7 +73,7 @@ def plot_with_std_band(x,y,std,color="red",hold_on=False,label=None):
     y    np array of size N
     std  np array of size N
     """
-    plt.plot(x, y, '-', color=color,label=label)
+    plt.plot(x, y, '-', color=color,label=label,linewidth=5)
     plt.fill_between(x, y-std, y+std,
                  color=color, alpha=0.2)
 
