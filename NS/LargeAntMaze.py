@@ -70,9 +70,9 @@ class LargeAntMaze(Problem):
         """
         evaluates the agent
         returns 
-            fitness   whether the agent solved the task
+            fitness   augments with the number of solved tasks
             bd        behavior descriptor
-            solved    same as fitness, but boolean
+            solved    boolean, has the agent solved all tasks
         """
         #print("evaluating agent ", ag._idx)
 
@@ -91,7 +91,8 @@ class LargeAntMaze(Problem):
 
             action=ag(obs)
             action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
-            obs, _ , ended, info=self.env.step(action)
+            obs, reward , ended, info=self.env.step(action)
+            fitness+=reward
             last_position=np.array([info["x_position"],info["y_position"]])
             behavior_info.append(last_position.reshape(1,2))
 
@@ -107,7 +108,7 @@ class LargeAntMaze(Problem):
             if all(solved_tasks):
                 solved=True
                 ended=True
-                fitness=1
+                fitness+=1
                 break
 
             if ended:
@@ -124,18 +125,26 @@ class LargeAntMaze(Problem):
         """
         bds=[x._behavior_descr.reshape(self.bd_extractor.num,self.bd_extractor.dims) for x in population]
         novs=[x._nov for x in population]
-        sorted_by_nov=np.argsort(novs)[::-1]#most novel to least novel
+        sorted_by_nov=np.argsort(novs).tolist()[::-1]#most novel to least novel
 
+        fits=[x._fitness for x in population]
+        sorted_by_fitness=np.argsort(fits).tolist()[::-1]#most novel to least novel
+        
         to_plot=sorted_by_nov[:3]
+        to_plot+=sorted_by_fitness[:3]
+
         for i in range(len(bds)):
             if i in to_plot:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.set_aspect('equal', adjustable='box')
                 for j in range(len(self.env.goals)):
                     goal_j=self.env.goals[j]
-                    plt.plot(goal_j.coords[0],goal_j.coords[1],color=goal_j.color,marker="s",linestyle="")
-                #pdb.set_trace()
+                    plt.plot(goal_j.coords[0],goal_j.coords[1],color=goal_j.color,marker="o",linestyle="",markersize=25)
                 plt.plot(bds[i][:,0],bds[i][:,1],"k")
                 plt.xlim(-45,45)
                 plt.ylim(-45,45)
+                #pdb.set_trace()
                 if not quitely:
                     plt.show()
                 else:

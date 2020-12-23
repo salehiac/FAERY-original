@@ -31,6 +31,9 @@ import matplotlib.pyplot as plt
 import torch
 import tqdm
 import cv2
+import deap.creator
+import deap.base
+import deap.tools
 
 sys.path.append("../")
 from Data import LinnaeusLoader
@@ -484,6 +487,44 @@ def selBest(individuals,k,fit_attr=None,automatic_threshold=True):
     s_indx=np.argsort(individual_novs).tolist()[::-1]#decreasing order
     return [individuals[i] for i in s_indx[:k]]
     
+
+
+class NSGA2:
+    """
+    wrapper around deap's selNSGA2
+    """
+    def __init__(self, k):
+        deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
+        deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
+
+        self.k=k
+        
+    def __call__(self, individuals, fit_attr=None, automatic_threshold=True):
+        individual_novs=[x._nov for x in individuals]
+        if automatic_threshold:
+            md=np.median(individual_novs)
+            individual_novs=list(map(lambda x: x if x>md else 0, individual_novs))
+
+        light_pop=[]
+        for i in range(len(individuals)):
+            light_pop.append(deap.creator.LightIndividuals())
+            light_pop[-1].fitness.setValues([individuals[i]._fitness, individual_novs[i]])
+            light_pop[-1].ind_i=i
+
+        chosen=deap.tools.selNSGA2(light_pop, self.k, nd="standard")
+        chosen_inds=[x.ind_i for x in chosen]
+
+        #pdb.set_trace()
+        return [individuals[u] for u in chosen_inds]
+
+
+
+
+
+
+
+
+
 
 
 

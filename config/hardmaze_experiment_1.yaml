@@ -18,8 +18,7 @@ mutator:
   gaussian_params: {"mu": 0.0, "sigma": 0.2, "indpb": 0.8} #Gomes' paper recommends low mutation rates (indpb)
   poly_params: {"eta": 15.0, "low": -5.0, "up": 5.0, "indpb": 0.1} #values used in diversity algorithms repo
 selector:
-  type: "elitist" # choices are "nsga2", "elitist", "tournament", "roulette", "random". Note that except nsag2 which is based on both fintess and novelty, all other choices 
-                  #are purely based on novlety
+  type: "elitist_with_thresh" # choices are "nsga2_with_thresh", "elitist_with_thresh", "roulette_with_thresh"
 problem:
   name: "hardmaze" 
   bd_type: "generic" #choices are learned, learned_frozen, engineered, generic

@@ -1,4 +1,6 @@
 
+Hey, check whether parent nvoelty is recomputed each time or not (especially with learnt nov)
+
 ATTENTION!!!!!
 
 note that batchnorm doesn't make sense for the frozen encoder as its result MUST be frozen. Batchnorm will change them depending on the batch

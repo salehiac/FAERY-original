@@ -310,11 +310,20 @@ if __name__=="__main__":
             arch=None
 
         #create selector
-        if config["selector"]["type"]=="elitist":
+        if config["selector"]["type"]=="elitist_with_thresh":
 
-            #the issue with roulette is that it ends up chosing the same element many times
-            #selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
             selector=functools.partial(MiscUtils.selBest,k=config["hyperparams"]["population_size"])
+
+        elif config["selector"]["type"]=="roulette_with_thresh":
+            roulette_msg="Usage currently not supported: it ends up chosing the same element many times, this duplicates agent._ids etc"
+            roulette_msg+=" fixing this bug is not a priority since selBest with thresholding actually works well"
+            raise Exception(roulette_msg)
+            #selector=functools.partial(MiscUtils.selRoulette,k=config["hyperparams"]["population_size"])
+
+        elif config["selector"]["type"]=="nsga2_with_thresh":
+
+            selector=MiscUtils.NSGA2(k=config["hyperparams"]["population_size"])
+
         else:
             raise NotImplementedError("selector")
 

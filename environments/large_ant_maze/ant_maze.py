@@ -76,7 +76,11 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             end_episode = True
         self.ts+=1
 
-        reward=0#we only want to use pure exploration
+        reward=0
+        for gl in self.goals:
+            if gl.solved_by(np.array([planar_position[0], planar_position[1]])):
+                reward+=1
+
         ob = self._get_obs()
 
         self._obs_hist.append(ob)
