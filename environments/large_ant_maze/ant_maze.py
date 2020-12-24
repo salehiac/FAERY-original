@@ -52,7 +52,7 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.fixed_init=fixed_init
 
 
-        mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=1)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
+        mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=5)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
         utils.EzPickle.__init__(self, xml_path, max_ts, fixed_init)
 
         #note: don't add members after the call to MujocoEnv.__init__ as it seems to call step

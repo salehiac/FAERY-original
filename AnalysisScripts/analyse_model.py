@@ -155,7 +155,7 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 
     ages=[]
     dists=[]
-    for gen in range(0,400,10):
+    for gen in range(0,60,5):
         if gen%100==0:
             print("gen==",gen)
         fn=root_dir+f"/population_gen_{gen}"
@@ -279,7 +279,8 @@ if __name__=="__main__":
         #        root+"/NS_log_36944/",
         #        root+"/NS_log_39017/"]
 
-        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/"
+        #root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/"
+        root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/"
         list_of_experiments=os.listdir(root)
         list_of_experiments=[root+"/"+x for x in list_of_experiments]
 

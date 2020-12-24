@@ -194,15 +194,24 @@ if __name__=="__main__":
     if visualize_agent_behavior:
         import pickle
 
-        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_3524/population_gen_54"
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_11048/population_gen_45"
 
         with open(pop_path, "rb") as fl:
             ags_all=pickle.load(fl)
 
-        #novs=[x._nov for x in ags]
         num_to_keep=3
+       
+        
         fits=[x._fitness for x in ags_all]
-        kept=np.argsort(fits)[::-1][:num_to_keep]
+        kept=np.argsort(fits)[::-1][:num_to_keep] 
+        print("agents were chosen based on fitness")
+        
+        #novs=[x._nov for x in ags_all]
+        #kept=np.argsort(novs)[::-1][:num_to_keep]
+        #print("agents were chosen based on novelty")
+
+
+
         ags=[ags_all[i] for i in kept]
 
 
