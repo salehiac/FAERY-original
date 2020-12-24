@@ -112,7 +112,9 @@ class LargeAntMaze(Problem):
                 if (not prev_status) and new_status:
                     fitness+=1
                     solved_tasks[t_idx]= True
-           
+                    #print(colored(f"solved task {task.color} ", "red", attrs=["bold"]))
+        
+                    
             if all(solved_tasks):
                 solved=True
                 ended=True
@@ -192,13 +194,13 @@ if __name__=="__main__":
     if visualize_agent_behavior:
         import pickle
 
-        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_85865/population_gen_19"
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_3524/population_gen_49"
 
         with open(pop_path, "rb") as fl:
             ags_all=pickle.load(fl)
 
         #novs=[x._nov for x in ags]
-        num_to_keep=1
+        num_to_keep=3
         fits=[x._fitness for x in ags_all]
         kept=np.argsort(fits)[::-1][:num_to_keep]
         ags=[ags_all[i] for i in kept]
@@ -211,6 +213,7 @@ if __name__=="__main__":
                 assets={"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"})
 
         for ag in ags:
-            lam(ag)
+            f_ag,_, s_ag=lam(ag)
+            print("final fitness==", f_ag, "solved_all_tasks==",s_ag)
  
 
