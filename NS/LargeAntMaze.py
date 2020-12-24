@@ -42,6 +42,7 @@ class LargeAntMaze(Problem):
         super().__init__()
         xml_path=assets["env_xml"]
         self.env=AntObstaclesBigEnv(xml_path=xml_path)
+        self.env.seed(127)#to avoid having a different environment when evaluating agents after optimisation 
 
         #display=True
         
@@ -191,13 +192,21 @@ if __name__=="__main__":
     if visualize_agent_behavior:
         import pickle
 
-        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_79448/population_gen_300"
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_85865/population_gen_19"
 
         with open(pop_path, "rb") as fl:
-            ags=pickle.load(fl)
+            ags_all=pickle.load(fl)
+
+        #novs=[x._nov for x in ags]
+        num_to_keep=1
+        fits=[x._fitness for x in ags_all]
+        kept=np.argsort(fits)[::-1][:num_to_keep]
+        ags=[ags_all[i] for i in kept]
+
+
 
         lam=LargeAntMaze(bd_type="generic",
-                max_steps=20000,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
+                max_steps=25000,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
                 display=True,
                 assets={"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"})
 
