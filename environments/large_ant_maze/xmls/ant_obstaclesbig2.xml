@@ -21,7 +21,7 @@ the "Meta-Learning Shared Hierarchies" paper: https://arxiv.org/abs/1710.09767 -
     <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
     <geom conaffinity="1" condim="3" material="MatPlane" name="floor" pos="5 5 0" rgba="0.8 0.9 0.8 1" size="35 35 40" type="plane"/>
 <!--    <body name="torso" pos="-35 15 0.6">-->
-    <body name="torso" pos="-25 -25 0.6">
+    <body name="torso" pos="0 -24 0.6">
       <geom name="torso_geom" pos="0 0 0" size="0.25 0.25 0.25" type="ellipsoid"/>
       <geom name="head" density="0.01" rgba="1.0 0.5 0.3 1" pos="0.4 0 0.25" size="0.25" type="sphere"/>
       <joint armature="0" damping="0" limited="false" margin="0.01" name="root" pos="0 0 0" type="free"/>
@@ -87,11 +87,11 @@ the "Meta-Learning Shared Hierarchies" paper: https://arxiv.org/abs/1710.09767 -
     <geom pos="10 -15 0" conaffinity="1" rgba="0.9 0.9 0.9 1" size="0.3 15 2" type="box"/>
     <!-- <geom pos="30 -5 0" conaffinity="1" rgba="0.9 0.9 0.9 1" size="0.3 25 2" type="box"/> -->
 
-    <!-- the big green square goals -->
-    <geom pos="34 -25 3" conaffinity="1" rgba="1.0 1.0 0.0 0.2" size="5 5 0.05" type="ellipsoid"/>
+    <!-- the circular red green blue goals -->
+    <geom pos="34 -25 3" conaffinity="1" rgba="0.0 1.0 0.0 0.2" size="5 5 0.05" type="ellipsoid"/>
     <geom pos="-24 33  3" conaffinity="1" rgba="1.0 0.0 0.0 0.2" size="5 5 0.05" type="ellipsoid"/>
-    <geom pos="15 15  3" conaffinity="1" rgba="0.0 0.0 1.0 0.2" size="5 5 0.05" type="ellipsoid"/>
-    <geom pos="4 -24  3" conaffinity="1" rgba="0.0 1.0 0.0 0.2" size="5 5 0.05" type="ellipsoid"/>
+    <geom pos="15 15  3" conaffinity="1" rgba="0.0 0.2 7.0 0.2" size="5 5 0.05" type="ellipsoid"/>
+    <geom pos="4 -24  3" conaffinity="1" rgba="1.0 1.0 0.0 0.2" size="5 5 0.05" type="box"/>
     <!-- the monster -->
 <!--    <geom pos="25 30 0" conaffinity="0" contype="0" rgba="0.9 0.2 0.2 1" size="15 15 0.1" type="ellipsoid"/>-->
     <!-- The monster seems to be important for balancing out forces and whatnot, so I'm leaving it -->

@@ -37,25 +37,33 @@ class GoalArea:
         return self.dist(x) < self.ray
 
 class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self, xml_path, max_ts=5000, fixed_init=True):
+    def __init__(self, xml_path, max_ts, fixed_init=True):
         self.ts = 0
         self.goals=[
-                GoalArea(np.array([34,-25]),"yellow", 5),
+                GoalArea(np.array([34,-25]),"green", 5),
                 GoalArea(np.array([-24,33]),"red", 5),
-                GoalArea(np.array([15,15]),"blue", 5),
-                GoalArea(np.array([4,-24]),"green", 5)]
+                GoalArea(np.array([15,15]),"blue", 5)]
 
         self.max_ts = max_ts
         self.xml_path=xml_path
         self.ts=0
         self._obs_hist=deque(maxlen=30)#to check if the ant is stuck
+       
         self.fixed_init=fixed_init
 
 
-        mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=5)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
+        mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=1)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
         utils.EzPickle.__init__(self, xml_path, max_ts, fixed_init)
 
         #note: don't add members after the call to MujocoEnv.__init__ as it seems to call step
+
+        #also note: change init pose of ant from the xml, not from code
+        #init_qpos=np.array([-4. , -24. ,   0.6,   1. ,   0. ,   0. ,   0. ,   0. ,   0. ,
+        #    0. ,   0. ,   0. ,   0. ,   0. ,   0. ])
+        #self.set_state(init_qpos, self.init_qvel)
+
+
+
 
         
 

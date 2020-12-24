@@ -41,7 +41,7 @@ class LargeAntMaze(Problem):
         """
         super().__init__()
         xml_path=assets["env_xml"]
-        self.env=AntObstaclesBigEnv(xml_path=xml_path)
+        self.env=AntObstaclesBigEnv(xml_path=xml_path, max_ts=max_steps)
         self.env.seed(127)#to avoid having a different environment when evaluating agents after optimisation 
 
         #display=True
@@ -194,7 +194,7 @@ if __name__=="__main__":
     if visualize_agent_behavior:
         import pickle
 
-        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_3524/population_gen_49"
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_3524/population_gen_54"
 
         with open(pop_path, "rb") as fl:
             ags_all=pickle.load(fl)
