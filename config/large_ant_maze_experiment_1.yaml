@@ -22,7 +22,7 @@ selector:
 problem:
   name: "large_ant_maze" 
   bd_type: "generic" #choices are learned, learned_frozen, engineered, generic
-  max_steps: 20000
+  max_steps: 25000
   assets: {"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 

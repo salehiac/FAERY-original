@@ -36,7 +36,7 @@ sys.path.append("..")
 from environments.large_ant_maze.ant_maze import AntObstaclesBigEnv
 
 class LargeAntMaze(Problem):
-    def __init__(self, bd_type="generic", max_steps=2000, display=False, assets={}):
+    def __init__(self, bd_type="generic", max_steps=20000, display=False, assets={}):
         """
         """
         super().__init__()
@@ -92,7 +92,9 @@ class LargeAntMaze(Problem):
             action=ag(obs)
             action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
             obs, reward , ended, info=self.env.step(action)
-            fitness+=reward
+            
+            fitness+=reward#rewards given by step() can either be negative or zero
+
             last_position=np.array([info["x_position"],info["y_position"]])
             behavior_info.append(last_position.reshape(1,2))
 
@@ -103,7 +105,12 @@ class LargeAntMaze(Problem):
             for t_idx in range(len(self.env.goals)):
                 task=self.env.goals[t_idx]
                 #print(task.solved_by(last_position))
-                solved_tasks[t_idx]= solved_tasks[t_idx]  or task.solved_by(last_position)
+                prev_status=solved_tasks[t_idx]
+                new_status=task.solved_by(last_position)
+
+                if (not prev_status) and new_status:
+                    fitness+=1
+                    solved_tasks[t_idx]= True
            
             if all(solved_tasks):
                 solved=True
@@ -157,7 +164,8 @@ class LargeAntMaze(Problem):
 if __name__=="__main__":
    
     import Agents
-    test_scoop=True
+    test_scoop=False
+    visualize_agent_behavior=True
     #test_scoop=False
 
     if test_scoop:
@@ -179,4 +187,21 @@ if __name__=="__main__":
             ind._fitness=results[i][0]
             ind._behavior_descr=results[i][1]
             print(i, ind._fitness, ind._behavior_descr)
+
+    if visualize_agent_behavior:
+        import pickle
+
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_79448/population_gen_300"
+
+        with open(pop_path, "rb") as fl:
+            ags=pickle.load(fl)
+
+        lam=LargeAntMaze(bd_type="generic",
+                max_steps=20000,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
+                display=True,
+                assets={"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"})
+
+        for ag in ags:
+            lam(ag)
+ 
 

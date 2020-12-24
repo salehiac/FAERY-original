@@ -77,16 +77,19 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.ts+=1
 
         reward=0
-        for gl in self.goals:
-            if gl.solved_by(np.array([planar_position[0], planar_position[1]])):
-                reward+=1
+        #we should NOT check for that type of reward here because if the agent reaches this destination but gets stuck it will continue to receive positive rewards
+        #this sould be handled from __call__
+        #for gl in self.goals:
+        #    if gl.solved_by(np.array([planar_position[0], planar_position[1]])):
+        #        reward+=1
 
         ob = self._get_obs()
 
         self._obs_hist.append(ob)
         is_stuck=False
-        if len(self._obs_hist)==self._obs_hist.maxlen and np.linalg.norm(reduce(lambda x,y: y-x,self._obs_hist,0))<0.5:
+        if len(self._obs_hist)==self._obs_hist.maxlen and np.linalg.norm(reduce(lambda x,y: y-x,self._obs_hist,0))<1:
             is_stuck=True
+            reward=-5
             end_episode=True
         
         return ob, reward, end_episode, dict(x_position=planar_position[0],
