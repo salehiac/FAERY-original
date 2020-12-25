@@ -194,7 +194,7 @@ if __name__=="__main__":
     if visualize_agent_behavior:
         import pickle
 
-        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_11048/population_gen_45"
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_11048/population_gen_124"
 
         with open(pop_path, "rb") as fl:
             ags_all=pickle.load(fl)

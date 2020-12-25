@@ -1,3 +1,8 @@
+
+"""
+IMPORTANT: for BR-NS to be better than classical NS, batch size should not be smaller than population size
+"""
+
 import time
 import torch
 import numpy as np
@@ -5,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.neighbors import KDTree
 import MiscUtils
+
 
 if __name__=="__main__":
 
@@ -15,14 +21,16 @@ if __name__=="__main__":
     #for descr_dim in [2,4,8, 16, 32, 64]:
     #for descr_dim in range(2,64,2):
     #bd_size_range=[2,4,8,16,32,64,128,256]
-    bd_size_range=[2,4,8,16,32,64]
+    #bd_size_range=[2,4,8,16,32,64]
+    bd_size_range=[20,32,64]
     for descr_dim in bd_size_range:
     
-        num_gens=100
+        num_gens=10
         
-        pop_sz=100 #note that in archive-based methods, nearest neighbours should be found for both population and archive
-        emb_dim=descr_dim*4
-        pop_bds=torch.rand(pop_sz,descr_dim)
+        pop_sz=300 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
+        offspring_sz=2*pop_sz
+        emb_dim=descr_dim*2
+        pop_bds=torch.rand(offspring_sz+pop_sz,descr_dim)
         
         frozen=MiscUtils.SmallEncoder1d(descr_dim,
                 emb_dim,
@@ -44,7 +52,7 @@ if __name__=="__main__":
         time_hist=[]
         frozen.eval()
         optimizer = torch.optim.SGD(learnt.parameters(), lr=1e-2)
-        batch_sz=128
+        batch_sz=512
        
         #torch.cuda.synchronize() #model should be fast on cpu so nevermind gpu timings
 
@@ -67,6 +75,7 @@ if __name__=="__main__":
                 for batch_i in range(0,pop_bds.shape[0],batch_sz):
                     batch=torch.Tensor(pop_bds[batch_i:batch_i+batch_sz])
 
+                    ####### this currently isn't the case in the code, but this part can be optimized away as the frozen forward passes have already been called above
                     #with torch.no_grad():
                     #    e_frozen=frozen(pop_bds)
                     #    e_pred=learnt(pop_bds)
@@ -77,7 +86,7 @@ if __name__=="__main__":
                         learnt.train()
                         e_l=learnt(pop_bds)
                         loss=(e_l-e_frozen).norm()**2
-                        loss/=pop_sz
+                        loss/=(pop_sz+offspring_sz)
                         loss.backward()
                         optimizer.step()
             t2=time.time()
