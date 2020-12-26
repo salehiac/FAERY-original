@@ -27,7 +27,7 @@ if __name__=="__main__":
     
         num_gens=10
         
-        pop_sz=300 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
+        pop_sz=25 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
         offspring_sz=2*pop_sz
         emb_dim=descr_dim*2
         pop_bds=torch.rand(offspring_sz+pop_sz,descr_dim)
@@ -51,8 +51,8 @@ if __name__=="__main__":
 
         time_hist=[]
         frozen.eval()
-        optimizer = torch.optim.SGD(learnt.parameters(), lr=1e-2)
-        batch_sz=512
+        optimizer = torch.optim.Adam(learnt.parameters(), lr=1e-2)
+        batch_sz=256
        
         #torch.cuda.synchronize() #model should be fast on cpu so nevermind gpu timings
 
@@ -60,11 +60,11 @@ if __name__=="__main__":
             t1=time.time()
           
             #timing for novelty computation before training
+            learnt.eval()
             for batch_i in range(0,pop_bds.shape[0],batch_sz):
                 batch=torch.Tensor(pop_bds[batch_i:batch_i+batch_sz])
 
                 with torch.no_grad():
-                    learnt.eval()
                     e_frozen=frozen(pop_bds)
                     e_pred=learnt(pop_bds)
                     nov=(e_pred-e_frozen).norm(dim=1)
@@ -99,7 +99,7 @@ if __name__=="__main__":
 
         
         if 1:
-            archive_size=10000
+            archive_size=5000
             #archive_size=3000
             knn_k=15
             kdt_bds=np.random.rand(archive_size, descr_dim)
