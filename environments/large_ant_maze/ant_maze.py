@@ -37,23 +37,33 @@ class GoalArea:
         return self.dist(x) < self.ray
 
 class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self, xml_path, max_ts, fixed_init=True):
+    def __init__(self, xml_path, max_ts, fixed_init=True, goal_type="huge"):
         self.ts = 0
-        self.goals=[
-                GoalArea(np.array([34,-25]),"green", 5),
-                GoalArea(np.array([-24,33]),"red", 5),
-                GoalArea(np.array([15,15]),"blue", 5)]
+        if goal_type=="large":
+            self.goals=[
+                    GoalArea(np.array([34,-25]),"green", 5),
+                    GoalArea(np.array([-24,33]),"red", 5),
+                    GoalArea(np.array([15,15]),"blue", 5)]
+        elif goal_type=="huge":
+            self.goals=[
+                    GoalArea(np.array([34,-25]),"green", 5),#color strings should be compatible with matplotlib
+                    GoalArea(np.array([-24,33]),"green", 5),
+                    GoalArea(np.array([15,15]),"green", 5),
+                    GoalArea(np.array([-21,-40]),"green", 5)]
+        else:
+            raise Exception("wronge goal type")
+
 
         self.max_ts = max_ts
         self.xml_path=xml_path
         self.ts=0
-        self._obs_hist=deque(maxlen=30)#to check if the ant is stuck
+        self._obs_hist=deque(maxlen=60) if goal_type=="huge" else deque(maxlen=30)#to check if the ant is stuck
        
         self.fixed_init=fixed_init
 
 
         mujoco_env.MujocoEnv.__init__(self, self.xml_path , frame_skip=5)#not that the max number of steps displayed in the viewer will be frame_skip*self.max_ts, NOT self.max_ts
-        utils.EzPickle.__init__(self, xml_path, max_ts, fixed_init)
+        utils.EzPickle.__init__(self, xml_path, max_ts, fixed_init, goal_type)
 
         #note: don't add members after the call to MujocoEnv.__init__ as it seems to call step
 
@@ -137,8 +147,9 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.viewer.opengl_context.set_buffer_size(4024, 4024)
 
 if __name__=="__main__":
-    xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"
-    ant=AntObstaclesBigEnv(xml_path=xml_abs_path,max_ts=1000)
+    #xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"
+    xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"
+    ant=AntObstaclesBigEnv(xml_path=xml_abs_path,max_ts=25000)
 
     obs=ant.reset()
     for i in range(10000):

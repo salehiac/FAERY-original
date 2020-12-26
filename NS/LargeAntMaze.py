@@ -36,12 +36,13 @@ sys.path.append("..")
 from environments.large_ant_maze.ant_maze import AntObstaclesBigEnv
 
 class LargeAntMaze(Problem):
-    def __init__(self, bd_type="generic", max_steps=20000, display=False, assets={}):
+    def __init__(self, pb_type="huge", bd_type="generic", max_steps=20000, display=False, assets={}):
         """
+        pb_type  str   either "huge" or "large"
         """
         super().__init__()
-        xml_path=assets["env_xml"]
-        self.env=AntObstaclesBigEnv(xml_path=xml_path, max_ts=max_steps)
+        xml_path=assets["huge_ant_maze"] if pb_type=="huge" else assets["large_ant_maze"]
+        self.env=AntObstaclesBigEnv(xml_path=xml_path, max_ts=max_steps, goal_type=pb_type)
         self.env.seed(127)#to avoid having a different environment when evaluating agents after optimisation 
 
         #display=True
@@ -56,7 +57,8 @@ class LargeAntMaze(Problem):
 
         self.max_steps=max_steps
 
-        self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=16)#dims=2 for position, no orientation, num is number of samples. the behavior_descriptor will be dims*num dimensional
+        num_samples=48 if pb_type=="huge" else 16
+        self.bd_extractor=BehaviorDescr.GenericBD(dims=2,num=num_samples)#dims=2 for position, the behavior_descriptor will be dims*num dimensional
         self.dist_thresh=1 
                 
         self.num_gens=0
@@ -217,9 +219,10 @@ if __name__=="__main__":
 
 
         lam=LargeAntMaze(bd_type="generic",
+                pb_type="huge",
                 max_steps=25000,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
                 display=True,
-                assets={"env_xml":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"})
+                assets={"large_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml", "huge_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"})
 
         for ag in ags:
             f_ag,_, s_ag=lam(ag)
