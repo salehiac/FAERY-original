@@ -192,7 +192,26 @@ class SmallFC_FW(torch.nn.Module, Agent):
     def get_genotype_len(self):
         return get_num_number_params(self, trainable_only=True)
 
-                
+
+
+class Agent1d(Agent):
+    """
+    for toy spiral problem
+    """
+    def __init__(self, min_val, max_val):
+        super().__init__()
+        self.min_val=min_val
+        self.max_val=max_val
+        self.phi=0
+
+    def set_flattened_weights(self,x):
+        self.phi=x[0]
+
+    def get_flattened_weights(self):
+        return [self.phi]
+
+    def get_genotype_len(self):
+        return 1
 
 if __name__=="__main__":
 

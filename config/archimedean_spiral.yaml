@@ -1,11 +1,11 @@
 ---
 hyperparams: 
-  population_size: 100
-  offspring_size: 100
+  population_size: 25
+  offspring_size: 25 
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
-  num_generations: 400
+  num_generations: 4000
 novelty_estimator:
-  type: "learned" #choiceas are "learned", "archive_based"
+  type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
   type : "list_based" 
   growth_rate: 6 #Gomes' paper ~6
@@ -16,23 +16,22 @@ archive:
 mutator:
   type: "poly_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
   gaussian_params: {"mu": 0.0, "sigma": 0.2, "indpb": 0.8} #Gomes' paper recommends low mutation rates (indpb)
-  poly_params: {"eta": 15.0, "low": -5.0, "up": 5.0, "indpb": 0.1} #values used in diversity algorithms repo
+  poly_params: {"eta": 500.0, "low": 0.0, "up": 100.0, "indpb": 1.0} #for the spiral problem, "low" and "up" are overwritten in NS.py
 selector:
   type: "elitist_with_thresh" # choices are "nsga2_with_thresh", "elitist_with_thresh", "roulette_with_thresh"
 problem:
-  name: "hardmaze" 
+  name: "archimedean_spiral" #choices are large_ant_maze, huge_ant_maze, hardmaze
   bd_type: "generic" #choices are learned, learned_frozen, engineered, generic
-  max_steps: 2000
-  assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
+  max_steps: 5000
+  assets: {"large_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml","huge_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"} # key-values here are based on problem type
 population:
-  individual_type: "simple_fw_fc" 
+  individual_type: "agent1d" 
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
-ns_log_root_tmp: "/tmp/"
-ns_log_root: "/home/achkan//misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_1_with_selBest/" #directory where NS will create a log directory based on its main pid
+ns_log_root: "/tmp/"
 save_checkpoints: 0 # 0 don't save, k save every k generations
-stop_when_task_solved: 0 #
-compute_parent_child_stats: 1 # 0 or 1
+stop_when_task_solved: 1 #
+compute_parent_child_stats: 0 # 0 or 1
 disable_tqdm: 0 # 0 or 1, you might want to disable it if you're using nohup
 
   

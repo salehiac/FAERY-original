@@ -209,7 +209,8 @@ class NoveltySearch:
                         x._bd_dist_to_parent_bd=problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
 
             parents=parents_next
-            self.nov_estimator.train(parents)
+            if hasattr(self.nov_estimator, "train"):
+                self.nov_estimator.train(parents)
             if self.archive is not None:
                 self.archive.update(pop, thresh=problem.dist_thresh)
                 if self.save_archive_to_file:
@@ -291,6 +292,9 @@ if __name__=="__main__":
             pb_type="huge" if config["problem"]["name"]=="huge_ant_maze" else "large"
             import LargeAntMaze
             problem=LargeAntMaze.LargeAntMaze(pb_type=pb_type,bd_type=bd_type, max_steps=max_steps, assets=assets)
+        elif config["problem"]["name"]=="archimedean_spiral":
+            import ArchimedeanSpiral
+            problem=ArchimedeanSpiral.ArchimedeanSpiralProblem()
         else:
             raise NotImplementedError("Problem type")
 
@@ -348,6 +352,9 @@ if __name__=="__main__":
                         num_hidden=num_hidden,
                         hidden_dim=hidden_dim,
                         output_normalisation=normalise_output_with)
+        elif config["population"]["individual_type"]=="agent1d":
+            def make_ag():
+                return Agents.Agent1d(min(problem.env.phi_vals), max(problem.env.phi_vals))
 
         
         # create mutator
@@ -363,6 +370,12 @@ if __name__=="__main__":
         elif mutator_type=="poly_same":
             mutator_conf=config["mutator"]["poly_params"]
             eta, low, up, indpb = mutator_conf["eta"], mutator_conf["low"], mutator_conf["up"], mutator_conf["indpb"] 
+
+            if config["population"]["individual_type"]=="agent1d":
+                dummy_ag=make_ag()
+                low=dummy_ag.min_val
+                up=dummy_ag.max_val
+
             mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=eta, low=low, up=up, indpb=indpb)
 
         else:

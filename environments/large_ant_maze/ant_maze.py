@@ -147,8 +147,8 @@ class AntObstaclesBigEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.viewer.opengl_context.set_buffer_size(4024, 4024)
 
 if __name__=="__main__":
-    #xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"
-    xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"
+    xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml"
+    #xml_abs_path="/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"
     ant=AntObstaclesBigEnv(xml_path=xml_abs_path,max_ts=25000)
 
     obs=ant.reset()

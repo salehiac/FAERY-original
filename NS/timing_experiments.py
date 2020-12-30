@@ -7,9 +7,23 @@ import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import torch.multiprocessing as mp
 
 from sklearn.neighbors import KDTree
 import MiscUtils
+
+def train(batch, pop_bds, learnt, frozen,optimizer, cst):
+    ####### this currently isn't the case in the code, but this part can be optimized away as the frozen forward passes have already been called above
+    with torch.no_grad():
+        e_frozen=frozen(pop_bds)
+
+        if 0:
+            optimizer.zero_grad()
+            e_l=learnt(pop_bds)
+            loss=(e_l-e_frozen).norm()**2
+            loss/=cst
+            loss.backward()
+            optimizer.step()
 
 
 if __name__=="__main__":
@@ -21,13 +35,13 @@ if __name__=="__main__":
     #for descr_dim in [2,4,8, 16, 32, 64]:
     #for descr_dim in range(2,64,2):
     #bd_size_range=[2,4,8,16,32,64,128,256]
-    #bd_size_range=[2,4,8,16,32,64]
-    bd_size_range=[20,32,64]
+    bd_size_range=[2,4,8,16,32,64]
+    #bd_size_range=[2,4,6,8]
     for descr_dim in bd_size_range:
     
         num_gens=10
         
-        pop_sz=25 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
+        pop_sz=500 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
         offspring_sz=2*pop_sz
         emb_dim=descr_dim*2
         pop_bds=torch.rand(offspring_sz+pop_sz,descr_dim)
@@ -51,46 +65,56 @@ if __name__=="__main__":
 
         time_hist=[]
         frozen.eval()
-        optimizer = torch.optim.Adam(learnt.parameters(), lr=1e-2)
+        optimizer = torch.optim.Adam([x for x in learnt.parameters() if x.requires_grad], lr=1e-2)
         batch_sz=256
        
         #torch.cuda.synchronize() #model should be fast on cpu so nevermind gpu timings
 
         for i in range(num_gens):
-            t1=time.time()
+            t1_n=time.time()
           
             #timing for novelty computation before training
             learnt.eval()
             for batch_i in range(0,pop_bds.shape[0],batch_sz):
-                batch=torch.Tensor(pop_bds[batch_i:batch_i+batch_sz])
+                batch=pop_bds[batch_i:batch_i+batch_sz]
 
                 with torch.no_grad():
-                    e_frozen=frozen(pop_bds)
-                    e_pred=learnt(pop_bds)
+                    e_frozen=frozen(batch)
+                    e_pred=learnt(batch)
                     nov=(e_pred-e_frozen).norm(dim=1)
 
             #this is how training is done, note that we can further reduce runtime by removing the extra frozen forward passes that we've made before when computing novelty
             learnt.train()
-            for i in range(5):
+            
+            #num_processes=2
+            #processes=[]
+            #learnt.share_memory()
+            #frozen.share_memory()
+            #for rank in range(num_processes):
+            #    proc = mp.Process(target=train, args=(batch,pop_bds.clone(), learnt, frozen, optimizer, offspring_sz+pop_sz))
+            #    proc.start()
+            #    processes.append(proc)
+            #for p in processes:
+            #    print("hello")
+            #    p.join()
+           
+            for _ in range(5):
                 for batch_i in range(0,pop_bds.shape[0],batch_sz):
-                    batch=torch.Tensor(pop_bds[batch_i:batch_i+batch_sz])
-
-                    ####### this currently isn't the case in the code, but this part can be optimized away as the frozen forward passes have already been called above
-                    #with torch.no_grad():
-                    #    e_frozen=frozen(pop_bds)
-                    #    e_pred=learnt(pop_bds)
-                    #    nov=(e_pred-e_frozen).norm(dim=1)
-                   
+                    batch=pop_bds[batch_i:batch_i+batch_sz]
+                    with torch.no_grad():
+                        e_frozen=frozen(batch)
+                        
                     if 1:
                         optimizer.zero_grad()
-                        learnt.train()
-                        e_l=learnt(pop_bds)
+                        e_l=learnt(batch)
                         loss=(e_l-e_frozen).norm()**2
-                        loss/=(pop_sz+offspring_sz)
+                        loss/=batch_sz
                         loss.backward()
                         optimizer.step()
-            t2=time.time()
-            time_hist.append(t2-t1)
+            
+            
+            t2_n=time.time()
+            time_hist.append(t2_n-t1_n)
             #print(time_hist)
                      
         mean_t_nets=np.array(time_hist).mean()
@@ -99,7 +123,7 @@ if __name__=="__main__":
 
         
         if 1:
-            archive_size=5000
+            archive_size=10000
             #archive_size=3000
             knn_k=15
             kdt_bds=np.random.rand(archive_size, descr_dim)
@@ -107,27 +131,28 @@ if __name__=="__main__":
             times=[]
             for i in range(num_gens):
                 #repartitioned)
-                t1=time.time()
+                t1_a=time.time()
                 #note that the kdtree has to be created everytime as after adding elements, you can't just reuse the same kdtree  (some cells might have become much more dense, and should be
                 kdt = KDTree(kdt_bds, leaf_size=20, metric='euclidean')
                 dists, ids=kdt.query(pop_bds, knn_k, return_distance=True)
-                t2=time.time()
-                times.append(t2-t1)
+                t2_a=time.time()
+                times.append(t2_a-t1_a)
 
             mean_t_arch=np.array(times).mean()
             global_time_archive.append(mean_t_arch)
             print(descr_dim, mean_t_arch)
 
-    gt_arc_ms=[x*1000 for x in global_time_archive]
-    gt_net_ms=[x*1000 for x in global_time_networks]
-    #plt.plot(range(0,62,2),gt_arc_ms,"r",label="Archive-based NS",linewidth=5);
-    #plt.plot(range(0,62,2),gt_net_ms,"b",label="BR-NS",linewidth=5);
-    plt.plot(bd_size_range,gt_arc_ms,"r",label=f"Archive-based NS (size=={archive_size})",linewidth=5);
-    plt.plot(bd_size_range,gt_net_ms,"b",label="BR-NS",linewidth=5);
-    plt.grid("on");plt.legend(fontsize=28);
-    plt.xlabel("behavior descriptor dimensionality",fontsize=28);
-    plt.ylabel("time (ms)", fontsize=28);plt.xticks(fontsize=28);
-    plt.yticks(fontsize=28);
-    plt.xlim(0,60)
+    if 1:
+        gt_arc_ms=[x*1000 for x in global_time_archive]
+        gt_net_ms=[x*1000 for x in global_time_networks]
+        #plt.plot(range(0,62,2),gt_arc_ms,"r",label="Archive-based NS",linewidth=5);
+        #plt.plot(range(0,62,2),gt_net_ms,"b",label="BR-NS",linewidth=5);
+        plt.plot(bd_size_range,gt_arc_ms,"r",label=f"Archive-based NS (size=={archive_size})",linewidth=5);
+        plt.plot(bd_size_range,gt_net_ms,"b",label="BR-NS",linewidth=5);
+        plt.grid("on");plt.legend(fontsize=28);
+        plt.xlabel("behavior descriptor dimensionality",fontsize=28);
+        plt.ylabel("time (ms)", fontsize=28);plt.xticks(fontsize=28);
+        plt.yticks(fontsize=28);
+        plt.xlim(0,60)
 
-    plt.show()
+        plt.show()

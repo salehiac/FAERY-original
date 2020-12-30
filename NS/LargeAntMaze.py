@@ -196,7 +196,8 @@ if __name__=="__main__":
     if visualize_agent_behavior:
         import pickle
 
-        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_11048/population_gen_124"
+        #pop_path="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/NS_log_11048/population_gen_124"
+        pop_path="/home/achkan/misc_experiments/guidelines_log/ant/96d-bd/NS_log_89973/population_gen_800"
 
         with open(pop_path, "rb") as fl:
             ags_all=pickle.load(fl)
@@ -221,11 +222,12 @@ if __name__=="__main__":
         lam=LargeAntMaze(bd_type="generic",
                 pb_type="huge",
                 max_steps=25000,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
-                display=True,
+                display=False,
                 assets={"large_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml", "huge_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"})
 
-        for ag in ags:
-            f_ag,_, s_ag=lam(ag)
-            print("final fitness==", f_ag, "solved_all_tasks==",s_ag)
+        if 0:
+            for ag in ags:
+                f_ag,_, s_ag=lam(ag)
+                print("final fitness==", f_ag, "solved_all_tasks==",s_ag)
  
 

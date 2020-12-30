@@ -70,15 +70,24 @@ def create_directory_with_pid(dir_basename,remove_if_exists=True,no_pid=False):
         fl.write("created on "+get_current_time_date()+"\n")
     return dir_path
 
-def plot_with_std_band(x,y,std,color="red",hold_on=False,label=None):
+def plot_with_std_band(x,y,std,color="red",hold_on=False,label=None, only_positive=False):
     """
     x    np array of size N
     y    np array of size N
     std  np array of size N
     """
     plt.plot(x, y, '-', color=color,label=label,linewidth=5)
-    plt.fill_between(x, y-std, y+std,
-                 color=color, alpha=0.2)
+
+    if not only_positive:
+        plt.fill_between(x, y-std, y+std,
+                color=color, alpha=0.2)
+    else:
+        mm1= y-std
+        mm2= y+std
+        mm1[mm1<0]=0
+        mm2[mm2<0]=0
+        plt.fill_between(x, mm1, mm2,
+                color=color, alpha=0.2)
 
     if not hold_on:
         plt.legend(fontsize=28)

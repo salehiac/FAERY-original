@@ -161,7 +161,7 @@ class LearnedNovelty1d(NoveltyEstimator):
 
         pop_bds=[x._behavior_descr for x in pop]
         pop_bds=np.concatenate(pop_bds, 0)
-        for _ in range(5):
+        for _ in range(3):
             for i in range(0,pop_bds.shape[0],self.batch_sz):
                 print("i==",i)
                 batch=torch.Tensor(pop_bds[i:i+self.batch_sz])

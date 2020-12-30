@@ -128,7 +128,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     
     for i in range(len(results)):
         results[i]=np.flip(results[i],0)#because hardmaze axis is inverted
-        #results[i]=scipy.special.softmax(results[i])
+        results[i]=scipy.special.softmax(results[i])
         #results[i]=results[i]/results[i].sum()
     
    
@@ -155,7 +155,7 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 
     ages=[]
     dists=[]
-    for gen in range(0,60,5):
+    for gen in range(0,100,5):
         if gen%100==0:
             print("gen==",gen)
         fn=root_dir+f"/population_gen_{gen}"
@@ -193,8 +193,19 @@ if __name__=="__main__":
         #list_of_experiments=[Experiment(root+"/NS_log_3351", False, "tanh", 2, 2)]
         #list_of_experiments=[Experiment(root+"/NS_log_67927", True, "leaky_relu", 2, 2)]
         
-        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/"
-        list_of_experiments=[Experiment(root+"/NS_log_43734/", False, "leaky_relu", 2, 4)]
+       
+        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
+        experiment_names=os.listdir(root)
+        list_of_experiments=[]
+        for x in experiment_names:
+            if "NS_log_" not in x:
+                continue
+            else:
+                list_of_experiments.append(Experiment(root+"/"+x, False, "leaky_relu", 2, 4))
+
+        #list_of_experiments=[Experiment(root+"/NS_log_1058", False, "leaky_relu", 2, 4)]
+
+
 
         #list_of_experiments=[Experiment(root+"/exp_1/NS_log_4735", False, "tanh", 2, 2),
         #        Experiment(root+"/NS_log_48482/", True, "leaky_relu", 2 ,2 ),
@@ -221,7 +232,7 @@ if __name__=="__main__":
         js_evolutions=np.array(js_evolutions)
         m_js_evolutions=js_evolutions.mean(0)
         std_js_evolutions=js_evolutions.std(0)
-        MiscUtils.plot_with_std_band(range(len(m_js_evolutions)),m_js_evolutions,std_js_evolutions**2)
+        MiscUtils.plot_with_std_band(range(len(m_js_evolutions)),m_js_evolutions,std_js_evolutions)
 
     if AGE_AND_DISTANCE_TO_PARENT:
 
@@ -307,9 +318,12 @@ if __name__=="__main__":
         plt.yticks(fontsize=28)
         plt.xlabel("generations",fontsize=28)
         plt.ylabel("mean population age",fontsize=28)
-        if 1:
+        
+        if 0:
             archive_age=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/hardmaze_archived_based_2d_age_evolution.npy")
             MiscUtils.plot_with_std_band(range(len(m_age)),archive_age.mean(0),archive_age.std(0),color="red",hold_on=False,label="Archive-based NS (size=10000)")
+        else:
+            plt.show()
 
 
         MiscUtils.plot_with_std_band(range(len(m_bd)),m_bd,std_bd,color="blue",hold_on=True,label="BR-NS")
@@ -318,9 +332,11 @@ if __name__=="__main__":
         plt.xlabel("generations",fontsize=28)
         plt.ylabel("mean distance to parent in behavior space",fontsize=28)
         plt.legend(fontsize=28)
-        if 1:
+        if 0:
             archive_bd_dist_to_par=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/hardmaze_archived_based_2d_parent_offspring_dist_evolution.npy")
             MiscUtils.plot_with_std_band(range(len(m_age)),archive_bd_dist_to_par.mean(0),archive_bd_dist_to_par.std(0),color="red",hold_on=False,label="Archive-based NS (size=10000)")
+        else:
+            plt.show()
 
 
        
