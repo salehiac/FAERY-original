@@ -35,13 +35,14 @@ if __name__=="__main__":
     #for descr_dim in [2,4,8, 16, 32, 64]:
     #for descr_dim in range(2,64,2):
     #bd_size_range=[2,4,8,16,32,64,128,256]
-    bd_size_range=[2,4,8,16,32,64]
+    #bd_size_range=[2,4,8,16,32,64,128]
+    bd_size_range=[2,32]
     #bd_size_range=[2,4,6,8]
     for descr_dim in bd_size_range:
     
-        num_gens=10
+        num_gens=100
         
-        pop_sz=500 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
+        pop_sz=25 #note that in archive-based methods, nearest neighbours should be found relative to both population and archive
         offspring_sz=2*pop_sz
         emb_dim=descr_dim*2
         pop_bds=torch.rand(offspring_sz+pop_sz,descr_dim)
@@ -86,9 +87,6 @@ if __name__=="__main__":
             #this is how training is done, note that we can further reduce runtime by removing the extra frozen forward passes that we've made before when computing novelty
             learnt.train()
             
-            #num_processes=2
-            #processes=[]
-            #learnt.share_memory()
             #frozen.share_memory()
             #for rank in range(num_processes):
             #    proc = mp.Process(target=train, args=(batch,pop_bds.clone(), learnt, frozen, optimizer, offspring_sz+pop_sz))
@@ -123,7 +121,7 @@ if __name__=="__main__":
 
         
         if 1:
-            archive_size=10000
+            archive_size=6000
             #archive_size=3000
             knn_k=15
             kdt_bds=np.random.rand(archive_size, descr_dim)

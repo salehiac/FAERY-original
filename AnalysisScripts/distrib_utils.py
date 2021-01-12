@@ -1,12 +1,13 @@
 import numpy as np
 import scipy.special
-
+import pdb
 
 def KLdiv(P,Q):
     """
     P, Q 2d distributions
     """
-    C=np.log2(P/Q)
+    eps=1e-9
+    C=np.log2(P/(Q+eps))
     return (P*C).sum()
 
 def jensen_shannon(P,Q):

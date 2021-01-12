@@ -21,9 +21,10 @@ import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
+
 def check_cover_deceptive_maze(root_dir,
         num_gens_to_check=400,
-        G=5,
+        G=10,
         h=600,
         w=600):
     """
@@ -72,27 +73,29 @@ if __name__=="__main__":
 
 
     if 1:#compute learning_based novelty for hard maze with 2d descriptors
-        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
+        #root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
+        root="/tmp/"
         experiments=[]
         if len(experiments)==0:
             experiments=os.listdir(root)
-        experiments=[root+x for x in experiments]
+        experiments=[root+x for x in experiments if "NS_log_" in x]
 
+        print(experiments)
         #experiments.pop(experiments.index("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/NS_log_67919"))
         #experiments=experiments[:1]
 
         evolutions=[] 
         for ex in experiments:
             print("ex==",ex)
-            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=400)
-            #plt.imshow(im)
-            #plt.show()
+            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=165)
+            plt.imshow(im)
+            plt.show()
             print(cover_hist[-1])
             evolutions.append(cover_hist)
         
         evolutions=np.array(evolutions)#size num_experiments*generations_sampled
         
-        if 1:#add learned novelty coverage info computed on distant server
+        if 0:#add learned novelty coverage info computed on distant server
             evolutions_1=np.load("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/coverage_6x6_hardmaze_2d_learned_nov_part_1.npy")
             evolutions=np.concatenate([evolutions, evolutions_1],0)
 
@@ -106,7 +109,7 @@ if __name__=="__main__":
         plt.legend(fontsize=28)
 
    
-    if 1:#checkout archive-based files computed on distant server
+    if 0:#checkout archive-based files computed on distant server
         
         archive_based_6x6_200=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/coverage_6x6_hardmaze_2d_archive_based_arch_size_200.npy")
 
@@ -120,10 +123,5 @@ if __name__=="__main__":
         #a_s_10000=archive_based_6x6_10000.std(0)
         #MiscUtils.plot_with_std_band(range(a_m_10000.shape[0]),a_m_10000,a_s_10000,color="orange",hold_on=False)
     
-
-
-
-
-
 
 

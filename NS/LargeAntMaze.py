@@ -170,7 +170,8 @@ if __name__=="__main__":
    
     import Agents
     test_scoop=False
-    visualize_agent_behavior=True
+    visualize_agent_behavior=False
+    visualise_cover_2d=True
     #test_scoop=False
 
     if test_scoop:
@@ -229,5 +230,83 @@ if __name__=="__main__":
             for ag in ags:
                 f_ag,_, s_ag=lam(ag)
                 print("final fitness==", f_ag, "solved_all_tasks==",s_ag)
+
+
+    if visualise_cover_2d:
+
+        import pickle
+        
+        dummy=LargeAntMaze(bd_type="generic",
+                pb_type="large",
+                max_steps=25000,#note that the viewer will go up to self.env.frame_skip*max_steps as well... it skips frames
+                display=False,
+                assets={"large_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml", "huge_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"})
+
+
+        
+        #fig = plt.figure()
+        #ax = fig.add_subplot(111)
+        #ax.set_aspect('equal', adjustable='box')
+        #for j in range(len(dummy.env.goals)):
+        #    goal_j=dummy.env.goals[j]
+        #    plt.plot(goal_j.coords[0],goal_j.coords[1],color=goal_j.color,marker="o",linestyle="",markersize=25)
+
+
+
+        root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_11048/"
+        root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_67193"
+        
+        #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000//NS_log_87678"
+
+        
+
+        gen_to_load=range(0,1000,1)
+        bds_list=set()
+        
+        for i in gen_to_load:
+            if i%10==0:
+                print("i==",i)
+            with open(root_dir+"/"+f"population_gen_{i}","rb") as fl:
+                
+                
+                agents=pickle.load(fl)
+                task_solvers=[x for x in agents if x._solved_task]
+                bds=[x._behavior_descr for x in task_solvers]
+
+                if len(task_solvers):
+                    print(f"task solved at generation {i}")
+
+                    for x in bds:#bds are of shape 1xN (N is either 32 or 96 up until now)
+                        #pdb.set_trace()
+                        bds_list.add(tuple(x[0].tolist()))
+
+                    num_pts=int(bds[0].shape[1]//2)
+                    bds=[x.reshape(num_pts,2) for x in bds]
+
+                    for bd in bds:
+                        for j in range(len(dummy.env.goals)):
+                            goal_j=dummy.env.goals[j]
+                            plt.plot(goal_j.coords[0],goal_j.coords[1],color=goal_j.color,marker="o",linestyle="",markersize=25)
+
+
+                        plt.plot(bd[:,0],bd[:,1],"k-")
+                    #plt.show()
+        plt.show()
+
+        M=np.concatenate([np.array(x).reshape(1,32) for x in bds_list],0)
+        cov=np.cov(M.transpose())
+
+        eigs_vals, eigs_vecs= np.linalg.eig(cov)
+
+        print(np.linalg.norm(eigs_vals))
+
+        val=1
+        for x in eigs_vals:
+            val*=x
+
+        print(val)
+
+
+    
  
 

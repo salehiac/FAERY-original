@@ -210,15 +210,17 @@ class NoveltySearch:
 
             parents=parents_next
             if hasattr(self.nov_estimator, "train"):
-                self.nov_estimator.train(parents)
+                self.nov_estimator.train(parents) 
             if self.archive is not None:
-                self.archive.update(pop, thresh=problem.dist_thresh)
+                self.archive.update(pop, thresh=problem.dist_thresh, boundaries=[0,600],knn_k=15)
                 if self.save_archive_to_file:
                     self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
             #self.problem.visualise_bds(parents, offsprings, quitely=True, save_to=self.log_dir_path )
-            MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents)
+            MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
+                                                                                     ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
+                                                                                     ############## in comparisons, but this is not clean at all, so yeah, change that
             
             if len(task_solvers):
                 print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))

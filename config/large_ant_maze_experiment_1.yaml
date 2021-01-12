@@ -5,13 +5,13 @@ hyperparams:
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
   num_generations: 4000
 novelty_estimator:
-  type: "learned" #choiceas are "learned", "archive_based"
+  type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
   type : "list_based" 
   growth_rate: 6 #Gomes' paper ~6
   growth_strategy: "random" # choices are "most_novel", "random"
   removal_strategy: "random" 
-  max_size: 200
+  max_size: 4000
   save_to_file: 1 # 0 or 1, saves archies each iteraiton
 mutator:
   type: "poly_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
@@ -20,16 +20,16 @@ mutator:
 selector:
   type: "nsga2_with_thresh" # choices are "nsga2_with_thresh", "elitist_with_thresh", "roulette_with_thresh"
 problem:
-  name: "huge_ant_maze" #choices are large_ant_maze, huge_ant_maze, hardmaze
+  name: "large_ant_maze" #choices are large_ant_maze, huge_ant_maze, hardmaze
   bd_type: "generic" #choices are learned, learned_frozen, engineered, generic
-  max_steps: 33000
+  max_steps: 25000
   assets: {"large_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstaclesbig2.xml","huge_ant_maze":"/home/achkan/misc_experiments/guidelines_paper/environments/large_ant_maze/xmls/ant_obstacles_huge.xml"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root_tmp: "/tmp/"
-ns_log_root: "/home/achkan/misc_experiments/guidelines_log/ant/96d-bd/"
+ns_log_root: "/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000/"
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
 compute_parent_child_stats: 1 # 0 or 1
