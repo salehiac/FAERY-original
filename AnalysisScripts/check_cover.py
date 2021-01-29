@@ -18,6 +18,7 @@ from NS import MiscUtils
 from NS import Agents
 
 import matplotlib
+from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
@@ -56,14 +57,14 @@ def check_cover_deceptive_maze(root_dir,
             bds_i[:,1]=600-bds_i[:,1]
 
             #plt.plot(bds_i[:,0],bds_i[:,1],"or");
-            #plt.scatter(bds_i[:,0],bds_i[:,1],s=80,facecolors="none",edgecolors="r");
+            plt.scatter(bds_i[:,0],bds_i[:,1],s=80,facecolors="none",edgecolors="r");
             #print("****************************************************************************")
             #print(bds_i)
             #plt.axis("equal") 
-            #plt.gca().set_aspect('equal', adjustable='box')
-            #plt.xlim(0,600)
-            #plt.ylim(0,600)
-            #plt.grid("on")
+            plt.gca().set_aspect('equal', adjustable='box')
+            plt.xlim(0,600)
+            plt.ylim(0,600)
+            plt.grid("on",alpha=3)
             #if i==370:
             #    #plt.show()
             #    plt.axis("off")
@@ -72,6 +73,16 @@ def check_cover_deceptive_maze(root_dir,
 
             cover_i=(grid!=0).sum()/(G*G)
             cover_hist.append(cover_i)
+    
+    
+    ax=plt.gca();
+    ax.set_xlim(0, 600);
+    ax.set_ylim(0, 600);
+    ax.xaxis.set_major_locator(MultipleLocator(int(600//G)));
+    ax.yaxis.set_major_locator(MultipleLocator(int(600//G)));
+    plt.grid("on");
+    plt.show()
+    
     return grid, cover_hist
 
 
@@ -93,7 +104,15 @@ if __name__=="__main__":
         #experiments=["/tmp/NS_log_16967/"]
         #experiments=["/tmp/NS_log_20231/"] #<==== this one is good
         #experiments=["/tmp/NS_log_29271/"]
-        experiments=["/tmp/NS_log_55815/"]
+        #experiments=["/tmp/NS_log_55815/"]
+        
+        #experiments=["/tmp/NS_log_65006/"]
+        
+        #experiments=["/home/achkan/misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/NS_log_67915/"]
+        #experiments=["/home/achkan/misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/NS_log_65006/"]  #best
+        #experiments=["/home/achkan//misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze//NS_log_76581"]
+        experiments=["/home/achkan//misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze//NS_log_78854"]
+
 
         print(experiments)
         #experiments.pop(experiments.index("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/NS_log_67919"))
@@ -102,7 +121,7 @@ if __name__=="__main__":
         evolutions=[] 
         for ex in experiments:
             print("ex==",ex)
-            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=390)
+            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=250
             plt.imshow(im)
             plt.show()
             print(cover_hist[-1])

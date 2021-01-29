@@ -63,7 +63,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
 
     frozen_net_path=root_dir+"/frozen_net.model"
     #learned_model_generations=list(range(0,45,10))
-    learned_model_generations=list(range(0,400,1))
+    learned_model_generations=list(range(0,20,1))
     #learned_model_generations=list(range(0,20))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     #print(learned_models_paths)
@@ -129,7 +129,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     for i in range(len(results)):
         results[i]=np.flip(results[i],0)#because hardmaze axis is inverted
         #results[i]=scipy.special.softmax(results[i])
-        results[i]=results[i]/results[i].sum()
+        #results[i]=results[i]/results[i].sum()
     
    
     #pdb.set_trace()
@@ -213,7 +213,8 @@ if __name__=="__main__":
         
 
 
-        list_of_experiments=[Experiment("/tmp/NS_log_110995/",False,"leaky_relu",2,4)]
+        #list_of_experiments=[Experiment("/tmp/NS_log_55815/",False,"leaky_relu",2,4)]
+        list_of_experiments=[Experiment("/tmp/NS_log_65006/",False,"leaky_relu",2,4)]
 
         js_evolutions=[]
         for x in list_of_experiments:

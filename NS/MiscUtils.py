@@ -120,6 +120,9 @@ class SmallEncoder1d(torch.nn.Module):
             use_bn=False):
         torch.nn.Module.__init__(self)
 
+        self.in_d=in_d
+        self.out_d=out_d
+
         hidden_dim=3*in_d
         self.mds=torch.nn.ModuleList([torch.nn.Linear(in_d, hidden_dim)])
 
@@ -529,14 +532,40 @@ class NSGA2:
 
 
 
+def make_networks_divergent(frozen, trained, frozen_domain_limits, iters):
+    """
+    frozen                         frozen network
+    trained                        network whose weights are learnt
+    frozen_domain_limits           torch tensor of shape N*2. The baehavior space is for now assumed to be an N-d cube,
+                                   and frozen_domain_limits[i,:] is the lower and higher bounds along that dimension
+    iters                          int 
+    """
+    LR=1e-4
+    optimizer=torch.optim.Adam(trained.parameters(), lr=LR)
+
+    assert frozen.in_d==trained.in_d and frozen.out_d==trained.out_d, "dims mismatch"
+
+    batch_sz=32
+    for it_i in range(iters):
+
+        trained.train()
+        frozen.eval()
+
+        batch=torch.zeros(batch_sz, frozen.in_d)
+        for d_i in range(frozen.in_d):
+            batch[:,d_i]=torch.rand(batch_sz)*(frozen_domain_limits[d_i,1]-frozen_domain_limits[d_i,0]) + frozen_domain_limits[d_i,0]
 
 
+        optimizer.zero_grad()
+        target = frozen(batch)
+        pred   = trained(batch)
+        loss=((target-pred)**2).sum(1)
+        loss=(loss.mean()).clone() * -1 #because we want networks to diverge
+        
+        loss.backward()
+        optimizer.step()
 
-
-
-
-
-
+        print(loss.item())
 
 
 if __name__=="__main__":

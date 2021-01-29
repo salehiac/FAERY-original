@@ -120,6 +120,13 @@ class LearnedNovelty1d(NoveltyEstimator):
         self.epoch=0
 
         self.log_dir=log_dir
+
+
+
+        hm_limits=np.array([[0,600],[0,600]])
+        MiscUtils.make_networks_divergent(self.frozen, self.learnt, hm_limits, iters=50)
+
+
         
     def update(self, pop, archive=None):
         
@@ -183,7 +190,7 @@ class LearnedNovelty1d(NoveltyEstimator):
                 weights=torch.Tensor([1.0 for x in range(batch.shape[0])])
                 #pdb.set_trace()
                 loss=ll*weights
-                loss=loss.mean()
+                loss=loss.mean().clone()
                 #loss/=self.batch_sz
                 #print(batch)
                 print("loss==",loss.item())
