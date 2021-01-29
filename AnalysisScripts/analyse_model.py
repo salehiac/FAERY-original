@@ -63,7 +63,7 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
 
     frozen_net_path=root_dir+"/frozen_net.model"
     #learned_model_generations=list(range(0,45,10))
-    learned_model_generations=list(range(0,400,10))
+    learned_model_generations=list(range(0,400,1))
     #learned_model_generations=list(range(0,20))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     #print(learned_models_paths)
@@ -128,15 +128,15 @@ def see_evolution_of_learned_novelty_distribution_hardmaze(root_dir,
     
     for i in range(len(results)):
         results[i]=np.flip(results[i],0)#because hardmaze axis is inverted
-        results[i]=scipy.special.softmax(results[i])
-        #results[i]=results[i]/results[i].sum()
+        #results[i]=scipy.special.softmax(results[i])
+        results[i]=results[i]/results[i].sum()
     
    
     #pdb.set_trace()
-    #results_np=np.concatenate(results,1)
-    #plt.imshow(results_np)
-    #plt.show()
-    #pdb.set_trace()
+    results_np=np.concatenate(results,1)
+    plt.imshow(results_np)
+    plt.show()
+    pdb.set_trace()
     
     
     uniform_distrib=distrib_utils.uniform_like(results[0])
@@ -172,7 +172,7 @@ def evolution_of_age_and_parent_child_distances(root_dir):
 if __name__=="__main__":
 
     JS_SINGLE_DIRETORY=False
-    JS_MULTIPLE_DIRECTORIES=False
+    JS_MULTIPLE_DIRECTORIES=True
     AGE_AND_DISTANCE_TO_PARENT=True
     
     if JS_SINGLE_DIRETORY:
@@ -211,18 +211,9 @@ if __name__=="__main__":
         #        Experiment(root+"/NS_log_48482/", True, "leaky_relu", 2 ,2 ),
         #        Experiment(root+"/NS_log_56907/",True, "leaky_relu", 2, 2)]
         
-        #list_of_experiments=[
-        #        Experiment(root+"/NS_log_22022/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_24029/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_24980/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_25764/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_26559/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_27382/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_29921/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_32611/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_34345/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_36944/",True, "leaky_relu", 2, 2),
-        #        Experiment(root+"/NS_log_39017/",True, "leaky_relu", 2, 2)]
+
+
+        list_of_experiments=[Experiment("/tmp/NS_log_110995/",False,"leaky_relu",2,4)]
 
         js_evolutions=[]
         for x in list_of_experiments:

@@ -212,7 +212,7 @@ class NoveltySearch:
             if hasattr(self.nov_estimator, "train"):
                 self.nov_estimator.train(parents) 
             if self.archive is not None:
-                self.archive.update(pop, thresh=problem.dist_thresh, boundaries=[0,600],knn_k=15)
+                self.archive.update(parents, offsprings, thresh=problem.dist_thresh, boundaries=[0,600],knn_k=15)
                 if self.save_archive_to_file:
                     self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
@@ -330,6 +330,10 @@ if __name__=="__main__":
         elif config["selector"]["type"]=="nsga2_with_thresh":
 
             selector=MiscUtils.NSGA2(k=config["hyperparams"]["population_size"])
+        
+        elif config["selector"]["type"]=="elitist":
+
+            selector=functools.partial(MiscUtils.selBest,k=config["hyperparams"]["population_size"],automatic_threshold=False)
 
         else:
             raise NotImplementedError("selector")

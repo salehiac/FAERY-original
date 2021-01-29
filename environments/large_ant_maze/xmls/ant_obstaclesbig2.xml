@@ -12,7 +12,7 @@ the "Meta-Learning Shared Hierarchies" paper: https://arxiv.org/abs/1710.09767 -
   </default>
   <asset>
     <texture type="skybox" builtin="gradient" rgb1=".1 .12 .15" rgb2="0 0 0" width="100" height="100"/>
-    <texture builtin="checker" height="100" name="texplane" rgb1=".1 .1 .1" rgb2=".15 .15 0.15" type="2d" width="100"/>
+    <texture builtin="checker" height="100" name="texplane" rgb1=".1 .1 .1" rgb2=".15 .15 .15" type="2d" width="100"/>
     <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="50 50" texture="texplane"/>
     <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
     <material name="geom" texture="texgeom" texuniform="true"/>
@@ -90,7 +90,7 @@ the "Meta-Learning Shared Hierarchies" paper: https://arxiv.org/abs/1710.09767 -
     <!-- the circular red green blue goals -->
     <geom pos="34 -25 3" conaffinity="1" rgba="0.0 1.0 0.0 0.2" size="5 5 0.05" type="ellipsoid"/>
     <geom pos="-24 33  3" conaffinity="1" rgba="1.0 0.0 0.0 0.2" size="5 5 0.05" type="ellipsoid"/>
-    <geom pos="15 15  3" conaffinity="1" rgba="0.0 0.2 7.0 0.2" size="5 5 0.05" type="ellipsoid"/>
+    <geom pos="15 15  3" conaffinity="1" rgba="0.0 0.0 1.0 0.2" size="5 5 0.05" type="ellipsoid"/>
     <geom pos="4 -24  3" conaffinity="1" rgba="1.0 1.0 0.0 0.2" size="5 5 0.05" type="box"/>
     <!-- the monster -->
 <!--    <geom pos="25 30 0" conaffinity="0" contype="0" rgba="0.9 0.2 0.2 1" size="15 15 0.1" type="ellipsoid"/>-->

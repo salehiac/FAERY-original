@@ -122,12 +122,11 @@ class HardMaze(Problem):
         
                 behavior_info=cv2.circle(behavior_info, (int(z[0]),int(z[1])) , 2, (255,0,0), thickness=-1)
             
-            #check if task solved
-            dist_to_goal=np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()]))
-            if dist_to_goal < self.goal_radius:
-                task_solved=True
-                ended=True
-                break#otherwise the robot might move away from the goal
+        #check if task solved
+        dist_to_goal=np.linalg.norm(np.array(info["robot_pos"][:2])-np.array([self.env.goal.get_x(), self.env.goal.get_y()]))
+        if dist_to_goal < self.goal_radius:
+            task_solved=True
+            ended=True
            
             #_mutex.acquire()
             #if dist_to_goal< self.best_dist_to_goal:
@@ -136,9 +135,6 @@ class HardMaze(Problem):
             #_mutex.release()
 
 
-            if ended:
-                break
-     
         #cv2.imwrite(f"/tmp/meta_observation_samples/obs_{ag._idx}.png", behavior_info)
         #self._debug_counter+=1
 

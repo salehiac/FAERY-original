@@ -24,7 +24,7 @@ matplotlib.rcParams['ps.fonttype'] = 42
 
 def check_cover_deceptive_maze(root_dir,
         num_gens_to_check=400,
-        G=10,
+        G=6,
         h=600,
         w=600):
     """
@@ -54,15 +54,21 @@ def check_cover_deceptive_maze(root_dir,
             bds_i=[x._behavior_descr for x in pop]
             bds_i=np.concatenate(bds_i,0)
             bds_i[:,1]=600-bds_i[:,1]
-            #plt.plot(bds_i[:,0],bds_i[:,1],"*b");
+
+            #plt.plot(bds_i[:,0],bds_i[:,1],"or");
+            #plt.scatter(bds_i[:,0],bds_i[:,1],s=80,facecolors="none",edgecolors="r");
             #print("****************************************************************************")
             #print(bds_i)
-            ##plt.axis("equal") 
+            #plt.axis("equal") 
+            #plt.gca().set_aspect('equal', adjustable='box')
             #plt.xlim(0,600)
             #plt.ylim(0,600)
-            ##plt.grid("on")
-            #plt.show()
-            #pdb.set_trace()
+            #plt.grid("on")
+            #if i==370:
+            #    #plt.show()
+            #    plt.axis("off")
+            #    plt.savefig("/tmp/explore.png",transparent=True)
+            #    #pdb.set_trace()
 
             cover_i=(grid!=0).sum()/(G*G)
             cover_hist.append(cover_i)
@@ -73,12 +79,21 @@ if __name__=="__main__":
 
 
     if 1:#compute learning_based novelty for hard maze with 2d descriptors
-        #root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
-        root="/tmp/"
+        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
+        #root="/tmp/"
+        #root="/home/achkan/misc_experiments/guidelines_log/archive_management/expectation_based/"
         experiments=[]
         if len(experiments)==0:
             experiments=os.listdir(root)
         experiments=[root+x for x in experiments if "NS_log_" in x]
+
+        #experiments=['/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/NS_log_3154']
+        #experiments=['/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/NS_log_127568']
+        #experiments=['/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/NS_log_5562']
+        #experiments=["/tmp/NS_log_16967/"]
+        #experiments=["/tmp/NS_log_20231/"] #<==== this one is good
+        #experiments=["/tmp/NS_log_29271/"]
+        experiments=["/tmp/NS_log_55815/"]
 
         print(experiments)
         #experiments.pop(experiments.index("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/NS_log_67919"))
@@ -87,7 +102,7 @@ if __name__=="__main__":
         evolutions=[] 
         for ex in experiments:
             print("ex==",ex)
-            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=165)
+            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=390)
             plt.imshow(im)
             plt.show()
             print(cover_hist[-1])

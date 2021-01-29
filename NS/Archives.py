@@ -65,7 +65,9 @@ class ListArchive(Archive):
     def reset(self):
         self.container.clear()
 
-    def update(self, pop, thresh=0, boundaries=[], knn_k=-1):
+    def update(self, parents, offspring, thresh=0, boundaries=[], knn_k=-1):
+        
+        pop=parents+offspring
         if self.growth_strategy=="random":
             r=random.sample(range(len(pop)),self.growth_rate)
             candidates=[pop[i] for i in r[:self.growth_rate]]
@@ -78,19 +80,19 @@ class ListArchive(Archive):
         self.container+=candidates
 
         if len(self)>=self.max_size:
-            self.manage_size(boundaries, population=np.concatenate([x._behavior_descr for x in pop],0).transpose(), knn_k=knn_k)
+            self.manage_size(boundaries, parents=np.concatenate([x._behavior_descr for x in parents],0).transpose(), knn_k=knn_k)
 
-    def manage_size(self,boundaries=[],population=[],knn_k=-1):
+    def manage_size(self,boundaries=[],parents=[],knn_k=-1):
         if self.removal_strategy=="random":
             r=random.sample(range(len(self)),k=self.max_size)
             self.container=[self.container[i] for i in r]
         elif self.removal_strategy=="optimal":
 
-            if population.shape[0]!=2:
+            if parents.shape[0]!=2:
                 raise Exception("this has only be implemented for 2d bds")
 
             #the order of concatenation is important for the indexations that come next
-            reference_set=np.concatenate([np.concatenate([x._behavior_descr for x in self.container],0).transpose(), population], 1)
+            reference_set=np.concatenate([np.concatenate([x._behavior_descr for x in self.container],0).transpose(), parents], 1)
            
             archive_sz=len(self.container)
             e_ls=[]
