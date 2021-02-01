@@ -253,14 +253,15 @@ if __name__=="__main__":
 
 
 
-        root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_11048/"
-        root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_67193"
+        #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_11048/"
+        #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_67193"
         
         #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000//NS_log_87678"
+        root_dir="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/NS_log_1605/"
 
         
 
-        gen_to_load=range(0,1000,1)
+        gen_to_load=range(0,2000,1)
         bds_list=set()
         
         for i in gen_to_load:

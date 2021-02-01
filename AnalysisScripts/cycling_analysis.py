@@ -116,7 +116,7 @@ def analyse_cycling_behavior_learnt_nov(root_dir, in_dim, out_dim):
     frozen.load_state_dict(torch.load(frozen_net_path))
     frozen.eval()
 
-    learned_model_generations=list(range(0,110,1))
+    learned_model_generations=list(range(0,1060,1))
     #learned_model_generations=list(range(0,900,1))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     num_non_frozen=len(learned_models_paths)
@@ -190,12 +190,13 @@ def analyse_cycling_behavior_learnt_nov(root_dir, in_dim, out_dim):
 if __name__=="__main__":
     
    
-    if 0:
+    if 1:
         root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/"
         #root="/tmp"
+        root="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/"
         experiment_names=os.listdir(root)
 
-        experiment_names.pop(experiment_names.index("NS_log_67193"))
+        #experiment_names.pop(experiment_names.index("NS_log_67193"))
         #experiment_names.pop(experiment_names.index("NS_log_11048"))
 
         list_of_experiments=[]
@@ -205,7 +206,7 @@ if __name__=="__main__":
             else:
                 list_of_experiments.append(root+"/"+x)
 
-
+        print(list_of_experiments)
         list_of_experiments=list_of_experiments[:1]
    
         qmats=[]
@@ -216,10 +217,10 @@ if __name__=="__main__":
 
         plt.imshow(qm);plt.show()
 
-        xx, yy= np.meshgrid(range(qm.shape[0]), range(qm.shape[0]))
-        fig=plt.figure(); ax=fig.add_subplot(111, projection='3d'); ax.plot_surface(yy,xx,np.sqrt(qm),cmap=cm.coolwarm); plt.show()
+        #xx, yy= np.meshgrid(range(qm.shape[0]), range(qm.shape[0]))
+        #fig=plt.figure(); ax=fig.add_subplot(111, projection='3d'); ax.plot_surface(yy,xx,np.sqrt(qm),cmap=cm.coolwarm); plt.show()
 
-    if 1:
+    if 0:
         
         #root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/"
         #root="/home/achkan/misc_experiments/guidelines_log/cycling_behavior/"

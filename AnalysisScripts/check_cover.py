@@ -90,38 +90,25 @@ if __name__=="__main__":
 
 
     if 1:#compute learning_based novelty for hard maze with 2d descriptors
-        root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
+        #root="/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/"
         #root="/tmp/"
         #root="/home/achkan/misc_experiments/guidelines_log/archive_management/expectation_based/"
+        root="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/"
         experiments=[]
         if len(experiments)==0:
             experiments=os.listdir(root)
         experiments=[root+x for x in experiments if "NS_log_" in x]
-
-        #experiments=['/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/NS_log_3154']
-        #experiments=['/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/NS_log_127568']
-        #experiments=['/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5_with_selBest/NS_log_5562']
-        #experiments=["/tmp/NS_log_16967/"]
-        #experiments=["/tmp/NS_log_20231/"] #<==== this one is good
-        #experiments=["/tmp/NS_log_29271/"]
-        #experiments=["/tmp/NS_log_55815/"]
         
-        #experiments=["/tmp/NS_log_65006/"]
-        
-        #experiments=["/home/achkan/misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/NS_log_67915/"]
-        #experiments=["/home/achkan/misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/NS_log_65006/"]  #best
-        #experiments=["/home/achkan//misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze//NS_log_76581"]
-        experiments=["/home/achkan//misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze//NS_log_78854"]
-
+        #experiments.pop(experiments.index("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/NS_log_67919"))
+        #experiments.pop(experiments.index("/home/achkan/misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/NS_log_112362"))
 
         print(experiments)
-        #experiments.pop(experiments.index("/home/achkan/misc_experiments/guidelines_log/learned_novelty/hardmaze2d/num_optim_iter_5/NS_log_67919"))
         #experiments=experiments[:1]
 
         evolutions=[] 
         for ex in experiments:
             print("ex==",ex)
-            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=250
+            im, cover_hist=check_cover_deceptive_maze(ex, num_gens_to_check=400)
             plt.imshow(im)
             plt.show()
             print(cover_hist[-1])
@@ -143,7 +130,7 @@ if __name__=="__main__":
         plt.legend(fontsize=28)
 
    
-    if 0:#checkout archive-based files computed on distant server
+    if 1:#checkout archive-based files computed on distant server
         
         archive_based_6x6_200=np.load("/home/achkan/misc_experiments/guidelines_log/archive_based/hardmaze_2d/coverage_6x6_hardmaze_2d_archive_based_arch_size_200.npy")
 

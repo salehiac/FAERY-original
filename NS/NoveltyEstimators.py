@@ -122,10 +122,17 @@ class LearnedNovelty1d(NoveltyEstimator):
         self.log_dir=log_dir
 
 
-
-        hm_limits=np.array([[0,600],[0,600]])
-        MiscUtils.make_networks_divergent(self.frozen, self.learnt, hm_limits, iters=50)
-
+        deceptive_maze=False
+        large_ant_maze=True
+        if deceptive_maze:
+            hm_limits=np.array([[0,600],[0,600]])
+            MiscUtils.make_networks_divergent(self.frozen, self.learnt, hm_limits, iters=50)
+        elif large_ant_maze:
+            lam_limits=np.array([[-50,50]])
+            lam_limits=np.repeat(lam_limits, self.frozen.in_d, axis=0)
+            MiscUtils.make_networks_divergent(self.frozen, self.learnt, lam_limits, iters=50)
+        else:
+            raise Exception("shouldn't happen")
 
         
     def update(self, pop, archive=None):

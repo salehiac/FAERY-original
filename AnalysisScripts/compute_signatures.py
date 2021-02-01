@@ -102,7 +102,7 @@ def compute_all_signatures(root_dir,num_pts=16,append_path=[[0, -24]],num_gens_t
 
 if __name__=="__main__":
     
-    num_gens_to_check=700
+    num_gens_to_check=1200
 
     if 1:
 
@@ -126,7 +126,8 @@ if __name__=="__main__":
     if 1:
         import pickle
         #with open("/home/achkan/misc_experiments/guidelines_log/signature_computation/sig_learnt_5000.pickle","rb") as fl:
-        with open("/tmp/sigs_l_learnt_lower_LR.pickle","rb") as fl:
+        #with open("/tmp/sigs_l_learnt_lower_LR.pickle","rb") as fl:
+        with open("/tmp/sigs_l_with_divergent_training.pickle","rb") as fl:
             sigs_l=pickle.load(fl)
 
                     

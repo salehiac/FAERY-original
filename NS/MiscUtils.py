@@ -511,7 +511,8 @@ class NSGA2:
 
         self.k=k
         
-    def __call__(self, individuals, fit_attr=None, automatic_threshold=True):
+    def __call__(self, individuals, fit_attr=None, automatic_threshold=False):
+        print("automatic_threshold=",automatic_threshold)
         individual_novs=[x._nov for x in individuals]
         if automatic_threshold:
             md=np.median(individual_novs)
@@ -540,7 +541,8 @@ def make_networks_divergent(frozen, trained, frozen_domain_limits, iters):
                                    and frozen_domain_limits[i,:] is the lower and higher bounds along that dimension
     iters                          int 
     """
-    LR=1e-4
+    #LR=1e-4 #deceptive maze
+    LR=1e-3
     optimizer=torch.optim.Adam(trained.parameters(), lr=LR)
 
     assert frozen.in_d==trained.in_d and frozen.out_d==trained.out_d, "dims mismatch"
