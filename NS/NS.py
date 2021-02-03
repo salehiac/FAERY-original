@@ -313,7 +313,7 @@ if __name__=="__main__":
             #embedding_dims=bd_dims
             #embedding_dims=1
             embedding_dims=2*bd_dims
-            nov_estimator=NoveltyEstimators.LearnedNovelty1d(in_dim=bd_dims, emb_dim=embedding_dims)
+            nov_estimator=NoveltyEstimators.LearnedNovelty1d(in_dim=bd_dims, emb_dim=embedding_dims, pb_limits=problem.get_behavior_space_boundaries())
             arch=None
 
         #create selector

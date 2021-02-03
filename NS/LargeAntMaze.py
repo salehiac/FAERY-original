@@ -68,6 +68,12 @@ class LargeAntMaze(Problem):
 
     def get_bd_dims(self):
         return self.bd_extractor.get_bd_dims()
+    
+    def get_behavior_space_boundaries(self):
+        lam_limits=np.array([[-50,50]])
+        lam_limits=np.repeat(lam_limits, self.get_bd_dims(), axis=0)
+        return lam_limits
+
 
     def __call__(self, ag):
         """
@@ -253,17 +259,21 @@ if __name__=="__main__":
 
 
 
-        #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_11048/"
-        #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_67193"
         
-        #root_dir="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000//NS_log_87678"
-        root_dir="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/NS_log_1605/"
+        #root_dir="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/learnt/NS_log_1605/"
+       
+        root_dir="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/archive_based//NS_log_34498"
 
         
 
-        gen_to_load=range(0,2000,1)
+        #gen_to_load=range(800,801,1)
+        gen_to_load=range(0,1400,1)
         bds_list=set()
-        
+      
+        append_path=[[0,-24]]#because of the way the sampling of the path is done, the initial point at which the ant is spawned is missing
+        append_path=[np.array(x).reshape(1,-1) for x in append_path]
+        to_append=np.concatenate(append_path,0)
+
         for i in gen_to_load:
             if i%10==0:
                 print("i==",i)
@@ -285,14 +295,22 @@ if __name__=="__main__":
                     bds=[x.reshape(num_pts,2) for x in bds]
 
                     for bd in bds:
+                        bd_full=np.concatenate([bd, to_append], 0)
                         for j in range(len(dummy.env.goals)):
                             goal_j=dummy.env.goals[j]
                             plt.plot(goal_j.coords[0],goal_j.coords[1],color=goal_j.color,marker="o",linestyle="",markersize=25)
 
 
-                        plt.plot(bd[:,0],bd[:,1],"k-")
-                    #plt.show()
-        plt.show()
+                        #plt.plot(bd_full[:,0],bd_full[:,1],"k-")#path
+                        #plt.plot(bd_full[-1,0],bd_full[-1,1],"yo")#starting point
+                        plt.plot(bd_full[0,0],bd_full[0,1],"mo")#end point
+                        #plt.show()
+        
+        plt.xlim(-45,45)
+        plt.ylim(-45,45)
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.savefig("/tmp/cover_fig.png")
+        #plt.show()
 
         M=np.concatenate([np.array(x).reshape(1,32) for x in bds_list],0)
         cov=np.cov(M.transpose())
@@ -306,6 +324,8 @@ if __name__=="__main__":
             val*=x
 
         print(val)
+
+
 
 
     

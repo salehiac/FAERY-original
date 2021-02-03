@@ -21,4 +21,13 @@ class Problem(ABC):
     @abstractmethod
     def __call__(self, agent):
         pass
+    
+    @staticmethod
+    def get_behavior_space_boundaries(self):
+        """
+        If the behavior space is a bounded hypercube, returns an np.array of shape N*2 such that 
+        the i-th row corresponds to the (lower, upper) bounds in that dimension.
+        If the behavior space doesn't have that structure, it sould return None.
+        """
+        return None
  

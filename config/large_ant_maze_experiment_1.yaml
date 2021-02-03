@@ -5,13 +5,13 @@ hyperparams:
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
   num_generations: 4000
 novelty_estimator:
-  type: "learned" #choiceas are "learned", "archive_based"
+  type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
   type : "list_based" 
-  growth_rate: 6 #Gomes' paper ~6
+  growth_rate: 10 #Gomes' paper ~6
   growth_strategy: "random" # choices are "most_novel", "random"
   removal_strategy: "random" 
-  max_size: 4000
+  max_size: 2000
   save_to_file: 1 # 0 or 1, saves archies each iteraiton
 mutator:
   type: "poly_same" # types are "poly_same" , "gaussian",  "gaussian_adaptative" and "poly_adaptative". "same" indicates that all weights are mutated according to the same params
@@ -29,7 +29,7 @@ population:
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root_tmp: "/tmp/"
-ns_log_root: "/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/"
+ns_log_root: "/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/archive_based/"
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
 compute_parent_child_stats: 1 # 0 or 1

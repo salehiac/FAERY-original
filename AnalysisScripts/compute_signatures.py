@@ -91,7 +91,8 @@ def compute_all_signatures(root_dir,num_pts=16,append_path=[[0, -24]],num_gens_t
                     if bd_full.tolist() not in seen:
                         seen.append(bd_full.tolist())
 
-                    sig=iis.sig(bd_full,2)
+                    sig=iis.sig(bd_full,3)
+                    #pdb.set_trace()
                     sig_list.add(tuple(sig.tolist()))
 
     sig_list=list(sig_list) 
@@ -102,67 +103,44 @@ def compute_all_signatures(root_dir,num_pts=16,append_path=[[0, -24]],num_gens_t
 
 if __name__=="__main__":
     
-    num_gens_to_check=1200
+    num_gens_to_check=1000
 
     if 1:
 
-        root_archive_based="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000//NS_log_87678"
+        root_archive_based="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/archive_based/NS_log_34498/"
         sigs_a, seen_a=compute_all_signatures(root_archive_based,num_gens_to_check=num_gens_to_check)
-        for x in sigs_a:
-            plt.plot(x,"r")
-        #plt.show()
 
     if 0:
 
+        #sigs_a=np.load("/tmp/sigs_a_4000.npy")
         sigs_a=np.load("/tmp/sigs_a_6000.npy")
 
     
-    if 0:
+    if 1:
         #root_learnt="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_67193"
         #root_learnt="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_67193"
         #root_learnt="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/NS_log_11048"
+        root_learnt="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/learnt/NS_log_1605/"
         sigs_l, seen_l=compute_all_signatures(root_learnt,num_gens_to_check=num_gens_to_check)
+
+    if 0:
+        sigs_l=np.load("/tmp/sigs_l.npy")
     
-    if 1:
-        import pickle
-        #with open("/home/achkan/misc_experiments/guidelines_log/signature_computation/sig_learnt_5000.pickle","rb") as fl:
-        #with open("/tmp/sigs_l_learnt_lower_LR.pickle","rb") as fl:
-        with open("/tmp/sigs_l_with_divergent_training.pickle","rb") as fl:
-            sigs_l=pickle.load(fl)
-
-                    
-        for y in sigs_l:
-            plt.plot(y,"b")
-        plt.show()
-
-        
-        #for x,y in zip(seen_l, seen_a):
-        #    X=np.concatenate([np.array(a).reshape(1,2) for a in x],0)
-        #    Y=np.concatenate([np.array(a).reshape(1,2) for a in y],0)
-        #    plt.plot(X[:,0],X[:,1],"b")
-        #    plt.plot(Y[:,0],Y[:,1],"r")
-        #    plt.show()
 
     sigs_a=np.concatenate([np.array(x).reshape(1,-1) for x in sigs_a],0)
     sigs_l=np.concatenate([np.array(x).reshape(1,-1) for x in sigs_l],0)
 
-    #sigs_l=sigs_l[:num_gens_to_check,:num_gens_to_check]
-    
-    #this one was computed on remote server
-    #sigs_a_from_archive_time_2000=[24.81793639678651, 25.78711511336961, 140.0409259832257, 1524.322705715413, 1190.6048688310264, 773.4165719149466]
-
-    mu.plot_with_std_band(range(6),sigs_a.mean(0),sigs_a.std(0),hold_on=True,label="Archive of size 6000", only_positive=False,color="red")
-    mu.plot_with_std_band(range(6),sigs_l.mean(0),sigs_l.std(0),hold_on=True,label="BR-NS", only_positive=False,color="blue")
+    mu.plot_with_std_band(range(sigs_a.shape[1]),sigs_a.mean(0),sigs_a.std(0),hold_on=True,label="Archive of size 6000", only_positive=False,color="red")
+    mu.plot_with_std_band(range(sigs_l.shape[1]),sigs_l.mean(0),sigs_l.std(0),hold_on=True,label="BR-NS", only_positive=False,color="blue")
     plt.show()
 
-    #plt.plot(sigs_a.std(0),"r")
-    #plt.plot(sigs_a_from_archive_time_2000,color="orange")
-    #plt.plot(sigs_l.std(0),"b")
-    #plt.show()
+    plt.plot(sigs_a.std(0),"r")
+    plt.plot(sigs_l.std(0),"b")
+    plt.show()
 
 
-    cover_a, js_a, grid_a=check_signatures_cover_and_uniformity(sigs_a.transpose(),Gs=[3,3,5,20,15,10])
-    cover_l, js_l, grid_l=check_signatures_cover_and_uniformity(sigs_l.transpose(),Gs=[3,3,5,20,15,10])
+    #cover_a, js_a, grid_a=check_signatures_cover_and_uniformity(sigs_a.transpose(),Gs=[3,3,5,20,15,10])
+    #cover_l, js_l, grid_l=check_signatures_cover_and_uniformity(sigs_l.transpose(),Gs=[3,3,5,20,15,10])
 
 
 

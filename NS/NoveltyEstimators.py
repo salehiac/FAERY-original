@@ -94,7 +94,7 @@ class ArchiveBasedNoveltyEstimator(NoveltyEstimator):
 
 class LearnedNovelty1d(NoveltyEstimator):
 
-    def __init__(self, in_dim, emb_dim, batch_sz=128, log_dir="/tmp/"):
+    def __init__(self, in_dim, emb_dim, pb_limits=None, batch_sz=128, log_dir="/tmp/"):
 
         self.frozen=MiscUtils.SmallEncoder1d(in_dim,
             emb_dim,
@@ -122,17 +122,8 @@ class LearnedNovelty1d(NoveltyEstimator):
         self.log_dir=log_dir
 
 
-        deceptive_maze=False
-        large_ant_maze=True
-        if deceptive_maze:
-            hm_limits=np.array([[0,600],[0,600]])
-            MiscUtils.make_networks_divergent(self.frozen, self.learnt, hm_limits, iters=50)
-        elif large_ant_maze:
-            lam_limits=np.array([[-50,50]])
-            lam_limits=np.repeat(lam_limits, self.frozen.in_d, axis=0)
-            MiscUtils.make_networks_divergent(self.frozen, self.learnt, lam_limits, iters=50)
-        else:
-            raise Exception("shouldn't happen")
+        if pb_limits is not None:
+            MiscUtils.make_networks_divergent(self.frozen, self.learnt, pb_limits, iters=50)
 
         
     def update(self, pop, archive=None):

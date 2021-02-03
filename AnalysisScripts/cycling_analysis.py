@@ -22,41 +22,13 @@ sys.path.append("..")
 from NS import MiscUtils
 
 
-def kappa(QM,n=200):
-    """
-    Computes the kappa measure as defined in BR-NS
-
-    QM np.array of size g*g where g is the number of generations
-       QM[i,j] should contain the novelty of population i computed using the novelty estimator of generation j (which can either be an archive or a learnt novelty estimator)
-
-    Kappa[i] is then defined as the ratio eta_1/eta_0 where eta_0 is the mean novelty of the population and eta_1 the maximum mean novelty of the population after it has started rising again, i.e.
-      after its minimum novelty has been reached. For an ideal archive, this should be zero
-    """
-
-    res=[]
-    #for i in range(QM.shape[0]):
-    #    am=QM[i,i:].argmax()
-    #    zz=QM[i,am+i:].argmin()
-    #    vv=QM[i,zz+am+i:]
-    #    #pdb.set_trace()
-    #    ratios.append(vv.max()/QM[i,am+i])
-    #    #ratios.append(sum(vv>QM[i,i]))
-
-    for i in range(QM.shape[0]):
-        zz=QM[i,i:].argmin()
-        #vv=QM[i,i+zz:]
-        res.append(sum(QM[i,i+1:]>zz+4.8))#for br-ns (note that these values were obtained as explained in the paper)
-        #res.append(sum(QM[i,i+1:]>zz+17))#for archive (note that these values were obtained as explained in the paper)
-    
-    return res
-
-
 
 def analyse_cycling_behavior_archive_based(root_dir):
 
     ################################################# load all populations and archives
 
-    generations_to_use=list(range(1,1300,10))
+    #do skip at least 5 as otherwise it takes ages to compute 
+    generations_to_use=list(range(1,1000,10))
     populations=[]#those will actually store behavior descriptors
     archives=[]
     unused=[]#this will store the indexes of the first few geneartions where ther archive is empty
@@ -116,8 +88,7 @@ def analyse_cycling_behavior_learnt_nov(root_dir, in_dim, out_dim):
     frozen.load_state_dict(torch.load(frozen_net_path))
     frozen.eval()
 
-    learned_model_generations=list(range(0,1060,1))
-    #learned_model_generations=list(range(0,900,1))
+    learned_model_generations=list(range(0,2000,1))
     learned_models_paths=[root_dir+f"/learnt_{i}.model" for i in learned_model_generations]
     num_non_frozen=len(learned_models_paths)
     models=[]
@@ -175,7 +146,6 @@ def analyse_cycling_behavior_learnt_nov(root_dir, in_dim, out_dim):
                 #novelty=diff.median().item()
                 Qmat[i,j]=novelty
 
-            s_i=Qmat[i,:].max()
             #Qmat[i,:]/=s_i
 
 
@@ -190,10 +160,10 @@ def analyse_cycling_behavior_learnt_nov(root_dir, in_dim, out_dim):
 if __name__=="__main__":
     
    
-    if 1:
+    if 0:
         root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/learnt/"
         #root="/tmp"
-        root="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/"
+        root="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/learnt"
         experiment_names=os.listdir(root)
 
         #experiment_names.pop(experiment_names.index("NS_log_67193"))
@@ -215,30 +185,32 @@ if __name__=="__main__":
             #qm=analyse_cycling_behavior_learnt_nov(list_of_experiments[i], in_dim=2, out_dim=4)
             qmats.append(qm)
 
-        plt.imshow(qm);plt.show()
+        #plt.imshow(qm);plt.show()
 
         #xx, yy= np.meshgrid(range(qm.shape[0]), range(qm.shape[0]))
         #fig=plt.figure(); ax=fig.add_subplot(111, projection='3d'); ax.plot_surface(yy,xx,np.sqrt(qm),cmap=cm.coolwarm); plt.show()
 
-    if 0:
+    if 1:
         
         #root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/"
         #root="/home/achkan/misc_experiments/guidelines_log/cycling_behavior/"
-        root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000/"
+        #root="/home/achkan/misc_experiments/guidelines_log/ant/32d-bd/archive_4000/"
+        root="/home/achkan/misc_experiments/guidelines_log/for_open_source_code/large_ant/archive_based/"
         
-        #experiment_names=os.listdir(root)
+        experiment_names=os.listdir(root)
 
 
-        #list_of_experiments=[]
-        #for x in experiment_names:
-        #    if "NS_log_" not in x:
-        #        continue
-        #    else:
-        #        list_of_experiments.append(root+"/"+x)
+        list_of_experiments=[]
+        for x in experiment_names:
+            if "NS_log_" not in x:
+                continue
+            else:
+                list_of_experiments.append(root+"/"+x)
 
 
         #list_of_experiments=list_of_experiments[:1]
-        list_of_experiments=[root+"/"+"NS_log_87678"]
+
+        print(list_of_experiments)
    
         qmats=[]
         for i in range(len(list_of_experiments)):

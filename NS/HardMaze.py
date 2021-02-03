@@ -84,6 +84,9 @@ class HardMaze(Problem):
 
     def get_bd_dims(self):
         return self.bd_extractor.get_bd_dims()
+    
+    def get_behavior_space_boundaries(self):
+        return np.array([[0,600],[0,600]])
 
     def __call__(self, ag):
         #print("evaluating agent ", ag._idx)
