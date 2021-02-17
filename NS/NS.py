@@ -199,8 +199,8 @@ class NoveltySearch:
                 pop[ag_i]._nov=novs[ag_i]
             
             parents_next=self.selector(individuals=pop, fit_attr="_nov")
-            p_novs=[(x._idx, x._age, x._nov) for x in parents_next]
-            print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_novs)
+            #p_novs=[(x._idx, x._age, x._nov) for x in parents_next]
+            #print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_novs)
 
             #parents_next=[copy.deepcopy(x) for x in parents_next]
 

@@ -91,7 +91,8 @@ def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_datase
             fl.write(tmp_xml)
         asset_dict={"env_im":fl_n, "xml_path":tmp_xml_path}
         samples.append(HardMaze(assets=asset_dict))
-    
+  
+    np.random.shuffle(samples)
     return samples
 
 class HardMaze(Problem):

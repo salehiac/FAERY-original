@@ -311,7 +311,7 @@ if __name__=="__main__":
         test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
 
 
-        num_train_samples=200
+        num_train_samples=75
         num_test_samples=10
 
         train_sampler=functools.partial(HardMaze.sample_mazes,

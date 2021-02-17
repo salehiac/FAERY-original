@@ -151,7 +151,7 @@ class LearnedNovelty1d(NoveltyEstimator):
                 print("loss nov==",diff.mean().item())
                 pop_novs+=diff.cpu().detach().tolist()
         
-        print("******************************* novs ******************************",sorted(pop_novs)[::-1])
+        #print("******************************* novs ******************************",sorted(pop_novs)[::-1])
         assert len(pop_novs)==self.pop_bds.shape[0], "that shouldn't happen"
 
 
