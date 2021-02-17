@@ -146,6 +146,12 @@ class HardMaze(Problem):
 
         #self._debug_counter=0
 
+    def action_normalisation(self):
+        """
+        returns a function that should be used as the last non-linearity in agents (to constrain actions in an expected interval). If identity, just return ""
+        """
+        return ""
+
     def close(self):
         self.env.close()
 

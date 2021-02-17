@@ -62,31 +62,35 @@ class NoveltySearch:
             visualise_bds_flag,
             map_type="scoop",
             logs_root="/tmp/ns_log/",
-            compute_parent_child_stats=False):
+            compute_parent_child_stats=False,
+            initial_pop=[]):
         """
-        archive               Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
-        nov_estimator         NoveltyEstimator  object implementing the NoveltyEstimator interface. 
-        problem               Problem           object that provides 
-                                                     - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
-                                                     - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
-                                                       its nearest neighbour in the archive+pop in order for the point to be considered as novel. It is also used as a threshold on novelty
-                                                       when updating the archive.
-                                                    - optionally, a visualise_bds function.
-        mutator               Mutator
-        selector              function
-        n_pop                 int 
-        n_offspring           int           
-        agent_factory         function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
-                                                Currently, considered agents should 
-                                                    - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
-                                                    - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task, _created_at_gen
-                                                This is just to facilitate interactions with the deap library
-        visualise_bds_flag    int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to the logs dir.
-                                            possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
-        map_type              string            different options for sequential/parallel mapping functions. supported values currently are 
-                                                "scoop" distributed map from futures.map
-                                                "std"   buildin python map
-        logs_root             str               the logs diretory will be created inside logs_root
+        archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
+        nov_estimator                NoveltyEstimator  object implementing the NoveltyEstimator interface. 
+        problem                      Problem           object that provides 
+                                                            - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
+                                                            - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
+                                                              its nearest neighbour in the archive+pop in order for the point to be considered as novel. It is also used as a threshold on novelty
+                                                              when updating the archive.
+                                                           - optionally, a visualise_bds function.
+        mutator                      Mutator
+        selector                     function
+        n_pop                        int 
+        n_offspring                  int           
+        agent_factory                function          used to 1. create intial population and 2. convert mutated list genotypes back to agent types.
+                                                       Currently, considered agents should 
+                                                           - inherit from list (to avoid issues with deap functions that have trouble with numpy slices)
+                                                           - provide those fields: _fitness, _behavior_descr, _novelty, _solved_task, _created_at_gen
+                                                       This is just to facilitate interactions with the deap library
+        visualise_bds_flag           int               gets a visualisation of the behavior descriptors (assuming the Problem and its descriptors allow it), and either display it or save it to 
+                                                       the logs dir.
+                                                       possible values are BD_VIS_TO_FILE and BD_VIS_DISPLAY
+        map_type                     string            different options for sequential/parallel mapping functions. supported values currently are 
+                                                       "scoop" distributed map from futures.map
+                                                       "std"   buildin python map
+        logs_root                    str               the logs diretory will be created inside logs_root
+        compute_parent_child_stats   bool
+        initial_pop                  lst               if a prior on the population exists, it should be supplied here
         """
         self.archive=archive
         if archive is not None:
@@ -104,15 +108,15 @@ class NoveltySearch:
 
         self.n_offspring=n_offspring
         self.agent_factory=agent_factory
-        
-        initial_pop=[self.agent_factory() for i in range(n_pop)]
-        initial_pop=self.generate_new_agents(initial_pop, generation=0)
+       
+        if not len(initial_pop):
+            print(colored("[NS info] No initial population prior, initialising from scratch", "magenta",attrs=["bold"]))
+            initial_pop=[self.agent_factory() for i in range(n_pop)]
+            initial_pop=self.generate_new_agents(initial_pop, generation=0)
 
         self._initial_pop=copy.deepcopy(initial_pop)
       
         assert n_offspring>=len(initial_pop) , "n_offspring should be larger or equal to n_pop"
-        #if n_offspring!=len(initial_pop):
-        #    print(colored("[NS Warning] len(initial_pop)!=n_offspring. This will result in an additional random selection in self.generate_new_agents", "magenta",attrs=["bold"]))
 
         self.visualise_bds_flag= visualise_bds_flag
 
@@ -231,14 +235,14 @@ class NoveltySearch:
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
             tqdm_gen.refresh()
         
-        return parents, self.task_solvers
+        return parents, self.task_solvers, it
 
 
     def generate_new_agents(self, parents, generation:int):
        
-        parents_as_list=[(x._idx, x.get_flattened_weights()) for x in parents]
-        parents_to_mutate=random.choices(range(len(parents_as_list)),k=self.n_offspring)
-        mutated_genotype=[(parents_as_list[i][0], self.mutator(copy.deepcopy(parents_as_list[i][1]))) for i in parents_to_mutate]#deepcopy is because of deap
+        parents_as_list=[(x._idx, x.get_flattened_weights(), x._root) for x in parents]
+        parents_to_mutate=random.choices(range(len(parents_as_list)),k=self.n_offspring)#note that usually n_offspring>=len(parents)
+        mutated_genotype=[(parents_as_list[i][0], self.mutator(copy.deepcopy(parents_as_list[i][1])), parents_as_list[i][2]) for i in parents_to_mutate]#deepcopy is because of deap
 
         num_s=self.n_offspring if generation!=0 else len(parents_as_list)
         
@@ -248,6 +252,7 @@ class NoveltySearch:
             mutated_ags[i]._parent_idx=mutated_genotype[kept[i]][0]
             mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])
             mutated_ags[i]._created_at_gen=generation
+            mutated_ags[i]._root=mutated_genotype[kept[i]][2]
        
         #pdb.set_trace()
         return mutated_ags

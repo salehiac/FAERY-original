@@ -50,9 +50,12 @@ if __name__=="__main__":
 
         pbm=pbms[pbm_i]
         tmp_xml, err, ret_code=MiscUtils.bash_command(["sed","s#pbm_name_here#"+pbm+"#g",args.xml_template])
+        tmp_xml=tmp_xml.decode("utf-8")
+        tmp_xml=tmp_xml.replace("goal_y","60")
+        tmp_xml=tmp_xml.replace("goal_x","60")
         rand_xml_path="/tmp/"+MiscUtils.rand_string()+".xml"
         with open(rand_xml_path,"w") as fl:
-            fl.write(tmp_xml.decode("utf-8"))
+            fl.write(tmp_xml)
 
         assets={"xml_path": rand_xml_path, "env_im":pbm}
 
@@ -92,7 +95,7 @@ if __name__=="__main__":
         #do NS
         nov_estimator.log_dir=ns.log_dir_path
         ns.save_archive_to_file=True
-        final_pop, solutions=ns(iters=400,stop_on_reaching_task=False, save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
+        final_pop, solutions, iter_n=ns(iters=400,stop_on_reaching_task=False, save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
  
 
 

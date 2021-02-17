@@ -62,6 +62,12 @@ class LargeAntMaze(Problem):
         self.dist_thresh=1 
                 
         self.num_gens=0
+    
+    def action_normalisation(self):
+        """
+        returns a function that should be used as the last non-linearity in agents (to constrain actions in an expected interval). If identity, just return ""
+        """
+        return "tanh"
 
     def close(self):
         self.env.close()

@@ -46,8 +46,14 @@ class Agent(ABC):
         self._solved_task=False
         self._created_at_gen=-1 #to compute age
         self._parent_idx=-1#hacky way of computing bd distance between parent and child
+        self._root=-1#to keep track of the root of an evolutionnary path
         self._bd_dist_to_parent_bd=-1
         self._age=-1
+
+        #only useful for meta-learning with MetaQDForSparseRewards
+        self._useful_evolvability=-1
+        self._adaptation_speed_lst=[]
+        self._mean_adaptation_speed=-1
 
 
 
