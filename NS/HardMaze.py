@@ -65,7 +65,7 @@ def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_datase
         
         
     maze_gen=maze_generator.Maze(G) if not from_dataset else [from_dataset+"/"+x for x in os.listdir(from_dataset) if x[-3:]=="pbm"]
-    assert len(maze_gen)>num_samples, "not enough data"
+    assert len(maze_gen)>=num_samples, f"not enough data ({len(maze_gen)} but {num_samples} was requested)"
 
     samples=[]
     for i in range(num_samples):

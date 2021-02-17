@@ -279,6 +279,10 @@ class MetaQDForSparseRewards:
                 stop_on_reaching_task=True,#this should NEVER be False in this algorithm
                 save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
 
+        if not len(solutions.keys()):
+            print(colored("[NS warning] An environement remained unsolved. This can happen, but it should remain very rare.","red",attrs=["bold"]))
+            return
+
         assert len(solutions.keys())==1, "solutions should only contain solutions from a single generation"
         depth=list(solutions.keys())[0]
         for sol in solutions[depth]:
@@ -307,8 +311,8 @@ if __name__=="__main__":
         test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
 
 
-        num_train_samples=2
-        num_test_samples=2
+        num_train_samples=200
+        num_test_samples=10
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=6, 
@@ -327,8 +331,8 @@ if __name__=="__main__":
 
         algo=MetaQDForSparseRewards(pop_sz=25,
                 off_sz=25,
-                G_outer=1,
-                G_inner=100,
+                G_outer=100,
+                G_inner=200,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
