@@ -46,7 +46,7 @@ _mutex = Lock()
 
 
 
-def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_dataset="", random_goals=True):
+def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_dataset="", random_goals=False):
     """
     G                 int  mazes will be built based on GxG grids
     num_samples       int 
@@ -59,18 +59,19 @@ def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_datase
         
     if os.path.isdir(tmp_dir):
         dir_path=MiscUtils.create_directory_with_pid(dir_basename=tmp_dir+"/maze_generation_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
-        print(colored("[NS info] NS log directory was created: "+dir_path, "blue",attrs=[]))
+        print(colored("[NS info] temporary dir for sample_mazes was created: "+dir_path, "blue",attrs=[]))
     else:
         raise Exception("tmp_dir doesn't exist")
         
         
-    maze_gen=maze_generator.Maze(G) if not from_dataset else [from_dataset+"/"+x for x in os.listdir(from_dataset)]
+    maze_gen=maze_generator.Maze(G) if not from_dataset else [from_dataset+"/"+x for x in os.listdir(from_dataset) if x[-3:]=="pbm"]
     assert len(maze_gen)>num_samples, "not enough data"
 
     samples=[]
     for i in range(num_samples):
         if from_dataset:
             fl_n=maze_gen[i]
+            #pdb.set_trace()
         else:
             maze_gen.generate()
             fl_n=maze_gen.save(dir_path)
@@ -104,6 +105,7 @@ class HardMaze(Problem):
         super().__init__()
 
         if len(assets)>1:
+            #print("assets:\n",assets)
             rand_str=MiscUtils.rand_string(alpha=True, numerical=False) + "-v1"
             #print(rand_str)
             gym_fastsim.register(id=rand_str,
@@ -268,10 +270,10 @@ class HardMaze(Problem):
         goal=self.env.map.get_goals()[0]
         
         maze_im=cv2.circle(maze_im, 
-                (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),
+                (int(goal.get_x()*self.maze_im.shape[0]/real_h),int(goal.get_y()*self.maze_im.shape[1]/real_w)),
                 3, (0,0,0), thickness=-1)
         maze_im=cv2.circle(maze_im, 
-                (int(goal.get_y()*self.maze_im.shape[0]/real_h),int(goal.get_x()*self.maze_im.shape[1]/real_w)),
+                (int(goal.get_x()*self.maze_im.shape[0]/real_h),int(goal.get_y()*self.maze_im.shape[1]/real_w)),
                 int(self.goal_radius*self.maze_im.shape[0]/real_h), (0,0,0), thickness=1)
 
 
@@ -284,6 +286,20 @@ class HardMaze(Problem):
                 maze_im=cv2.merge([r,g,b])
                 cv2.imwrite(save_to+"/hardmaze_2d_bd_"+str(self.num_saved)+".png",maze_im)
                 self.num_saved+=1
+
+
+
+
+def test_envs(smp):
+    for pb in smp:
+        pb.env.enable_display()
+        for step in range(1000):
+            o, r, eo, info=pb.env.step([5,2])
+            print("Step %d Obs=%s  reward=%f  dist. to objective=%f  robot position=%s  End of ep=%s" % (step, str(o), r, info["dist_obj"], str(info["robot_pos"]), str(eo)))
+            pb.env.render()
+        pb.env.disable_display()
+
+
 
 
 if __name__=="__main__":
@@ -316,13 +332,5 @@ if __name__=="__main__":
         #smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml")
         smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml",from_dataset="/tmp/mazes_6x6_test/")
 
-        for pb in smp:
-            pb.env.enable_display()
-            for step in range(1000):
-                o, r, eo, info=pb.env.step([5,2])
-                print("Step %d Obs=%s  reward=%f  dist. to objective=%f  robot position=%s  End of ep=%s" % (step, str(o), r, info["dist_obj"], str(info["robot_pos"]), str(eo)))
-                pb.env.render()
- 
-            pb.env.disable_display()
-
+        test_envs(smp)
 

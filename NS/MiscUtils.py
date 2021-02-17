@@ -576,6 +576,42 @@ def make_networks_divergent(frozen, trained, frozen_domain_limits, iters):
         print(loss.item())
 
 
+def plot_matrix_with_textual_values(matrix, x_ticks=[], y_ticks=[], title_str="mat"):
+    """
+    x_ticks  vertical
+    y_ticks  horizontal
+    """
+
+    if not x_ticks:
+        x_ticks=[str(i) for i in range(matrix.shape[0])]
+    if not y_ticks:
+        y_ticks=[str(i) for i in range(matrix.shape[1])]
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(matrix)
+    
+    # We want to show all ticks...
+    ax.set_xticks(np.arange(len(y_ticks)))
+    ax.set_yticks(np.arange(len(x_ticks)))
+    # ... and label them with the respective list entries
+    ax.set_xticklabels(y_ticks)
+    ax.set_yticklabels(x_ticks)
+    
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    
+    # Loop over data dimensions and create text annotations.
+    for i in range(len(x_ticks)):
+        for j in range(len(y_ticks)):
+            text = ax.text(j, i, matrix[i, j],
+                           ha="center", va="center", color="w")
+    
+    ax.set_title(title_str)
+    fig.tight_layout()
+    plt.show()
+
+
 if __name__=="__main__":
 
     TEST_CREAT_DIR=False

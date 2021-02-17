@@ -51,9 +51,9 @@ class Agent(ABC):
         self._age=-1
 
         #only useful for meta-learning with MetaQDForSparseRewards
-        self._useful_evolvability=-1
+        self._useful_evolvability=0
+        self._mean_adaptation_speed=0
         self._adaptation_speed_lst=[]
-        self._mean_adaptation_speed=-1
 
 
 
