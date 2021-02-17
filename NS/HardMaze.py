@@ -21,19 +21,73 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import pdb
+import sys
+import os
 
 import gym
 import gym_fastsim
+from functools import reduce
+import string
+import random
 
 from scoop import futures
 from termcolor import colored
 import BehaviorDescr
 import MiscUtils
 from Problem import Problem
+sys.path.append("..")
+import environments.maze_generator.maze_generator as maze_generator
+
 
 from threading import Thread, Lock
 
 _mutex = Lock()
+
+
+
+
+def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_dataset="", random_goals=True):
+    """
+    G                 int  mazes will be built based on GxG grids
+    num_samples       int 
+    xml_template_path str  path to xml template to use for all HardMaze problems
+    tmp_dir           str  temporary directory where stuff can be written for libfastsim to use
+    from_dataset      str  if not "", then instead of generating new mazes, the ones from the dataset are used. In that case,
+                           from_dataset should be a dir where all the *pbm files (and only those) are found.
+    random_goals      bool currently only 2 goals are considered: upper left, upper right. Randomisation is done on those two.
+    """
+        
+    if os.path.isdir(tmp_dir):
+        dir_path=MiscUtils.create_directory_with_pid(dir_basename=tmp_dir+"/maze_generation_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
+        print(colored("[NS info] NS log directory was created: "+dir_path, "blue",attrs=[]))
+    else:
+        raise Exception("tmp_dir doesn't exist")
+        
+        
+    maze_gen=maze_generator.Maze(G) if not from_dataset else [from_dataset+"/"+x for x in os.listdir(from_dataset)]
+    assert len(maze_gen)>num_samples, "not enough data"
+
+    samples=[]
+    for i in range(num_samples):
+        if from_dataset:
+            fl_n=maze_gen[i]
+        else:
+            maze_gen.generate()
+            fl_n=maze_gen.save(dir_path)
+        tmp_xml, err, ret_code=MiscUtils.bash_command(["sed","s#pbm_name_here#"+fl_n+"#g",xml_template_path])
+        tmp_xml=tmp_xml.decode("utf-8")
+        if random_goals: #currently only upper left or upper right
+            val_x= 60 if np.random.rand()<0.5 else 540
+            val_y= 60
+            tmp_xml=tmp_xml.replace("goal_y",str(val_y))
+            tmp_xml=tmp_xml.replace("goal_x",str(val_x))
+        tmp_xml_path=fl_n[:-3]+"xml"
+        with open(tmp_xml_path,"w") as fl:
+            fl.write(tmp_xml)
+        asset_dict={"env_im":fl_n, "xml_path":tmp_xml_path}
+        samples.append(HardMaze(assets=asset_dict))
+    
+    return samples
 
 class HardMaze(Problem):
     def __init__(self, bd_type="generic", max_steps=2000, display=False, assets={}):
@@ -43,10 +97,23 @@ class HardMaze(Problem):
                               - learned   Encoder based, not implemented yet
                               - engineered here, it's a histogram of states 
 
-        assets   list     Either {} or a single list dict with key,val= env_im","absolute path to the maze *pbm". Only used to display behavior descriptors
+        assets   dict     either {}, {"env_im":path_to_a_pbm"}, {"xml_path":path_to_xml, "env_im":path_to_a_pbm}
+                          in the first two cases, this defaults to the original Lehman-Stanley maze, and in the second case env_im is used for visualisation
+                          in the last case, a custom maze is registered to gym based on the given xml, and env_im is again used for visualisation
         """
         super().__init__()
-        self.env = gym.make('FastsimSimpleNavigation-v0')
+
+        if len(assets)>1:
+            rand_str=MiscUtils.rand_string(alpha=True, numerical=False) + "-v1"
+            #print(rand_str)
+            gym_fastsim.register(id=rand_str,
+                    entry_point='gym_fastsim.simple_nav:SimpleNavEnv',
+                    kwargs={"xml_env":assets["xml_path"]})
+            self.env = gym.make(rand_str)
+        else:#standard Lehman-Stanely deceptive maze
+            self.env = gym.make('FastsimSimpleNavigation-v0')
+
+        #self.env=gym_fastsim
         self.dim_obs=len(self.env.reset())
         self.dim_act=self.env.action_space.shape[0]
         self.display= display
@@ -184,9 +251,9 @@ class HardMaze(Problem):
                 color=MiscUtils.colors.green
                 thickness=-1
                 #thickness=-1
-            if uu[pt_i]._nov > mean_nov:
-                #color=MiscUtils.colors.blue
-                thickness=1
+            #if uu[pt_i]._nov > mean_nov:
+            #    #color=MiscUtils.colors.blue
+            #    thickness=1
             maze_im=cv2.circle(maze_im, (int(z[pt_i,0]),int(z[pt_i,1])) , 3, color=color, thickness=thickness)
         
         maze_im=cv2.circle(maze_im,
@@ -216,8 +283,11 @@ class HardMaze(Problem):
 if __name__=="__main__":
    
     import Agents
-    test_scoop=True
-    #test_scoop=False
+    #test_scoop=True
+    test_scoop=False
+
+    test_maze_gen=True
+
 
     if test_scoop:
         hm=HardMaze(bd_type="generic",max_steps=2000,display=False)
@@ -234,4 +304,19 @@ if __name__=="__main__":
             ind._fitness=results[i][0]
             ind._behavior_descr=results[i][1]
             print(i, ind._fitness, ind._behavior_descr)
+
+    if test_maze_gen:
+
+        #smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml")
+        smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml",from_dataset="/tmp/mazes_6x6_test/")
+
+        for pb in smp:
+            pb.env.enable_display()
+            for step in range(1000):
+                o, r, eo, info=pb.env.step([5,2])
+                print("Step %d Obs=%s  reward=%f  dist. to objective=%f  robot position=%s  End of ep=%s" % (step, str(o), r, info["dist_obj"], str(info["robot_pos"]), str(eo)))
+                pb.env.render()
+ 
+            pb.env.disable_display()
+
 

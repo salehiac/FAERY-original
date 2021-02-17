@@ -34,12 +34,18 @@ import cv2
 import deap.creator
 import deap.base
 import deap.tools
+from functools import reduce
+import string
 
 sys.path.append("../")
 from Data import LinnaeusLoader
 
 def get_current_time_date():
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+def rand_string(alpha=True, numerical=True):
+    l2="0123456789" if numerical else ""
+    return reduce(lambda x,y: x+y, random.choices(string.ascii_letters+l2,k=10),"")
 
 def bash_command(cmd:list):
     """

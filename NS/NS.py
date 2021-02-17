@@ -206,13 +206,13 @@ class NoveltySearch:
                         xp=next((s for s in pop if s._idx== x._parent_idx), None)
                         if xp is None:
                             raise Exception("this shouldn't happen")
-                        x._bd_dist_to_parent_bd=problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
+                        x._bd_dist_to_parent_bd=self.problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
 
             parents=parents_next
             if hasattr(self.nov_estimator, "train"):
                 self.nov_estimator.train(parents) 
             if self.archive is not None:
-                self.archive.update(parents, offsprings, thresh=problem.dist_thresh, boundaries=[0,600],knn_k=15)
+                self.archive.update(parents, offsprings, thresh=self.problem.dist_thresh, boundaries=[0,600],knn_k=15)
                 if self.save_archive_to_file:
                     self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
