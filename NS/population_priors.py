@@ -96,7 +96,7 @@ class MetaQDForSparseRewards:
             num_train_samples,
             num_test_samples,
             agent_type="feed_forward",
-            top_level_log="/tmp/"):
+            top_level_log_root="/tmp/"):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on test data, but on meta observations from the inner loop. So the
         test_sampler here is used for the evaluation of the meta algorithm, not for learning.
@@ -109,7 +109,7 @@ class MetaQDForSparseRewards:
         num_train_samples    int          number of environments to use at each outer_loop generation for training
         num_test_samples     int          number of environments to use at each outer_loop generation for testing
         agent_type           str          either "feed_forward" or (TODO) "LSTM"
-        top_level_log        str          where to save the population after each top_level optimisation
+        top_level_log_root   str          where to save the population after each top_level optimisation
         """
 
         self.pop_sz=pop_sz
@@ -122,13 +122,13 @@ class MetaQDForSparseRewards:
         self.num_test_samples=num_test_samples
         self.agent_type=agent_type
         
-        if os.path.isdir(top_level_log):
-            dir_path=MiscUtils.create_directory_with_pid(dir_basename=top_level_log+"/meta-learning_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
+        if os.path.isdir(top_level_log_root):
+            dir_path=MiscUtils.create_directory_with_pid(dir_basename=top_level_log_root+"/meta-learning_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
             print(colored("[NS info] temporary dir for meta-learning was created: "+dir_path, "blue",attrs=[]))
         else:
             raise Exception("tmp_dir doesn't exist")
         
-        self.top_level_log=top_level_log
+        self.top_level_log=dir_path
     
         
         dummy_sample=train_sampler(num_samples=1)[0]
@@ -185,7 +185,8 @@ class MetaQDForSparseRewards:
                 self.inner_loop(pbs[pb_i],
                         pb_i,
                         tmp_pop,#should be passed by ref here
-                        evolution_table)
+                        evolution_table,
+                        test_mode=False)
     
 
             self.evolution_tables_train.append(evolution_table)
@@ -226,7 +227,8 @@ class MetaQDForSparseRewards:
                     self.inner_loop(test_pbs[pb_i_test],
                             pb_i_test,
                             self.pop,
-                            test_evolution_table)
+                            test_evolution_table,
+                            test_mode=True)
 
                 self.evolution_tables_test.append(test_evolution_table)
                 np.savez_compressed(self.top_level_log+"/evolution_table_test_"+str(outer_g), self.evolution_tables_test[-1])
@@ -269,7 +271,7 @@ class MetaQDForSparseRewards:
                 map_type="scoop",#or "std"
                 logs_root="/tmp/",
                 compute_parent_child_stats=0,
-                initial_pop=[x for x in tmp_pop])
+                initial_pop=[x for x in population])
         #do NS
         nov_estimator.log_dir=ns.log_dir_path
         ns.save_archive_to_file=False
@@ -316,7 +318,7 @@ if __name__=="__main__":
                 random_goals=False)
         
         
-        train_sampler=functools.partial(HardMaze.sample_mazes,
+        test_sampler=functools.partial(HardMaze.sample_mazes,
                 G=6, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
                 tmp_dir="/tmp/",
@@ -332,15 +334,10 @@ if __name__=="__main__":
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_type="feed_forward",
-                top_level_log="/home/achkan/misc_experiments/generalisation_paper/")
+                top_level_log_root="/home/achkan/misc_experiments/generalisation_paper/")
 
         algo()
         
         pdb.set_trace()
-
-
-
-
-
 
 

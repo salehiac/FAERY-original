@@ -82,6 +82,10 @@ def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_datase
             val_y= 60
             tmp_xml=tmp_xml.replace("goal_y",str(val_y))
             tmp_xml=tmp_xml.replace("goal_x",str(val_x))
+        else:
+            tmp_xml=tmp_xml.replace("goal_y",str(60))
+            tmp_xml=tmp_xml.replace("goal_x",str(60))
+
         tmp_xml_path=fl_n[:-3]+"xml"
         with open(tmp_xml_path,"w") as fl:
             fl.write(tmp_xml)
