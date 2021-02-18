@@ -16,7 +16,6 @@ from scoop import futures
 import yaml
 import argparse
 from termcolor import colored
-import tqdm
 import pickle
 
 import Archives
@@ -175,7 +174,9 @@ class MetaQDForSparseRewards:
         for outer_g in range(self.G_outer):
             pbs=self.train_sampler(num_samples=self.num_train_samples)
 
-            tmp_pop=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, self.make_ag)
+            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, self.make_ag)
+
+            tmp_pop=self.pop + offsprings
             
             evolution_table=-1*np.ones([len(tmp_pop), self.G_inner])#evolution_table[i,d]=k  means that environment k was solved at depth (inner_generation) d by 
                                                                     #mutating original agent i
@@ -193,7 +194,13 @@ class MetaQDForSparseRewards:
             for ind in tmp_pop:
                 if len(ind._adaptation_speed_lst):
                     ind._mean_adaptation_speed=np.mean(ind._adaptation_speed_lst)
-
+            
+            display_f0=[x._useful_evolvability for x in tmp_pop]
+            display_f1=[x._mean_adaptation_speed for x in tmp_pop]
+            print("_useful_evolvability TMP_POP \n",display_f0)
+            print("_mean_adaptation_speed TMP_POP\n",display_f1)
+            print("================================================================================")
+             
             #now the meta training part
             light_pop=[]
             for i in range(len(tmp_pop)):
@@ -206,10 +213,16 @@ class MetaQDForSparseRewards:
 
             self.pop=[tmp_pop[u] for u in chosen_inds]
             
+            display_f0=[x._useful_evolvability for x in self.pop]
+            display_f1=[x._mean_adaptation_speed for x in self.pop]
+
+            print("_useful_evolvability POP \n",display_f0)
+            print("_mean_adaptation_speed POP \n",display_f1)
+            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
             #reset evolvbility and adaptation stats
             for ind in self.pop:
                 ind._useful_evolvability=0
-                ind._mean_adaptation_speed=0
+                ind._mean_adaptation_speed=float("inf")
                 ind._adaptation_speed_lst=[]
 
             with open(self.top_level_log+"/population_prior_"+str(outer_g),"wb") as fl:
@@ -274,6 +287,7 @@ class MetaQDForSparseRewards:
                 initial_pop=[x for x in population])
         #do NS
         nov_estimator.log_dir=ns.log_dir_path
+        ns.disable_tqdm=True
         ns.save_archive_to_file=False
         _, solutions=ns(iters=self.G_inner,
                 stop_on_reaching_task=True,#this should NEVER be False in this algorithm
@@ -307,12 +321,12 @@ if __name__=="__main__":
     
     if TEST_WITH_RANDOM_2D_MAZES:
 
-        train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
-        test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
+        train_dataset_path="/home/achkan/datasets/mazes/mazes_6x6_train"
+        test_dataset_path="/home/achkan/datasets/mazes/mazes_6x6_test"
 
 
         num_train_samples=75
-        num_test_samples=10
+        num_test_samples=20
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=6, 
@@ -332,13 +346,13 @@ if __name__=="__main__":
         algo=MetaQDForSparseRewards(pop_sz=25,
                 off_sz=25,
                 G_outer=100,
-                G_inner=200,
+                G_inner=100,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_type="feed_forward",
-                top_level_log_root="/home/achkan/misc_experiments/generalisation_paper/")
+                top_level_log_root="/home/achkan/generalisation_paper/")
 
         algo()
         

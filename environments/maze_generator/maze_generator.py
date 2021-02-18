@@ -161,7 +161,7 @@ if __name__=="__main__":
         #maze.show()
         maze.save("/tmp/mazes_6x6_train/")
         
-    for i in range(10):
+    for i in range(20):
         maze.generate()
         #maze.show()
         maze.save("/tmp/mazes_6x6_test/")

@@ -52,7 +52,7 @@ class Agent(ABC):
 
         #only useful for meta-learning with MetaQDForSparseRewards
         self._useful_evolvability=0
-        self._mean_adaptation_speed=0
+        self._mean_adaptation_speed=float("inf")
         self._adaptation_speed_lst=[]
 
 
