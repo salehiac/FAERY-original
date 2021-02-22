@@ -321,15 +321,18 @@ if __name__=="__main__":
     
     if TEST_WITH_RANDOM_2D_MAZES:
 
-        train_dataset_path="/home/achkan/datasets/mazes/mazes_6x6_train"
-        test_dataset_path="/home/achkan/datasets/mazes/mazes_6x6_test"
+        #train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
+        #test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
+        train_dataset_path="/home/achkan/datasets/2d_mazes_10x10_dataset_1/mazes_10x10_train"
+        test_dataset_path="/home/achkan/datasets/2d_mazes_10x10_dataset_1/mazes_10x10_test"
 
 
-        num_train_samples=75
-        num_test_samples=20
+
+        num_train_samples=200
+        num_test_samples=40
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
-                G=6, 
+                G=10, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
                 tmp_dir="/tmp/",
                 from_dataset=train_dataset_path,
@@ -337,7 +340,7 @@ if __name__=="__main__":
         
         
         test_sampler=functools.partial(HardMaze.sample_mazes,
-                G=6, 
+                G=10, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
                 tmp_dir="/tmp/",
                 from_dataset=test_dataset_path,
@@ -346,13 +349,13 @@ if __name__=="__main__":
         algo=MetaQDForSparseRewards(pop_sz=25,
                 off_sz=25,
                 G_outer=100,
-                G_inner=100,
+                G_inner=250,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_type="feed_forward",
-                top_level_log_root="/home/achkan/generalisation_paper/")
+                top_level_log_root="/home/achkan/misc_experiments/generalisation_paper/")
 
         algo()
         
