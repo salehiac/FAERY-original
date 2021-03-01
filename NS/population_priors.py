@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import copy
 import functools
 import random
-import pdb
+#import pdb
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -95,7 +95,7 @@ class MetaQDForSparseRewards:
             num_train_samples,
             num_test_samples,
             agent_type="feed_forward",
-            top_level_log_root="/tmp/"):
+            top_level_log_root="//scratchbeta/salehia/tmp//"):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on test data, but on meta observations from the inner loop. So the
         test_sampler here is used for the evaluation of the meta algorithm, not for learning.
@@ -282,7 +282,7 @@ class MetaQDForSparseRewards:
                 agent_factory=self.make_ag,
                 visualise_bds_flag=1,#log to file
                 map_type="scoop",#or "std"
-                logs_root="/tmp/",
+                logs_root="//scratchbeta/salehia/tmp//",
                 compute_parent_child_stats=0,
                 initial_pop=[x for x in population])
         #do NS
@@ -323,42 +323,37 @@ if __name__=="__main__":
 
         #train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
         #test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
-        train_dataset_path="/home/achkan/datasets/2d_mazes_10x10_dataset_1/mazes_10x10_train"
-        test_dataset_path="/home/achkan/datasets/2d_mazes_10x10_dataset_1/mazes_10x10_test"
+        train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
+        test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
 
-
-
-        num_train_samples=200
-        num_test_samples=40
+        num_train_samples=75
+        num_test_samples=25
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
-                G=10, 
+                G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="/tmp/",
+                tmp_dir="//scratchbeta/salehia/tmp//",
                 from_dataset=train_dataset_path,
                 random_goals=False)
         
         
         test_sampler=functools.partial(HardMaze.sample_mazes,
-                G=10, 
+                G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="/tmp/",
+                tmp_dir="//scratchbeta/salehia/tmp//",
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
-        algo=MetaQDForSparseRewards(pop_sz=25,
-                off_sz=25,
+        algo=MetaQDForSparseRewards(pop_sz=24,
+                off_sz=24,
                 G_outer=100,
-                G_inner=250,
+                G_inner=200,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_type="feed_forward",
-                top_level_log_root="/home/achkan/misc_experiments/generalisation_paper/")
+                top_level_log_root="/scratchbeta/salehia/generalisation_paper/")
 
         algo()
-        
-        pdb.set_trace()
-
 

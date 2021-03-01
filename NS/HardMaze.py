@@ -46,7 +46,7 @@ _mutex = Lock()
 
 
 
-def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_dataset="", random_goals=False):
+def sample_mazes(G, num_samples, xml_template_path, tmp_dir="//scratchbeta/salehia/tmp//", from_dataset="", random_goals=False):
     """
     G                 int  mazes will be built based on GxG grids
     num_samples       int 
@@ -56,12 +56,13 @@ def sample_mazes(G, num_samples, xml_template_path, tmp_dir="/tmp/", from_datase
                            from_dataset should be a dir where all the *pbm files (and only those) are found.
     random_goals      bool currently only 2 goals are considered: upper left, upper right. Randomisation is done on those two.
     """
-        
-    if os.path.isdir(tmp_dir):
-        dir_path=MiscUtils.create_directory_with_pid(dir_basename=tmp_dir+"/maze_generation_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
-        print(colored("[NS info] temporary dir for sample_mazes was created: "+dir_path, "blue",attrs=[]))
-    else:
-        raise Exception("tmp_dir doesn't exist")
+       
+    if not from_dataset:
+        if os.path.isdir(tmp_dir):
+            dir_path=MiscUtils.create_directory_with_pid(dir_basename=tmp_dir+"/maze_generation_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
+            print(colored("[NS info] temporary dir for sample_mazes was created: "+dir_path, "blue",attrs=[]))
+        else:
+            raise Exception("tmp_dir doesn't exist")
         
         
     maze_gen=maze_generator.Maze(G) if not from_dataset else [from_dataset+"/"+x for x in os.listdir(from_dataset) if x[-3:]=="pbm"]
@@ -227,7 +228,7 @@ class HardMaze(Problem):
         elif self.bd_type=="learned" or self.bd_type=="learned_frozen":
             bd=self.bd_extractor.extract_behavior(behavior_info)
             if task_solved:
-                cv2.imwrite("/tmp/solution.png", behavior_info)
+                cv2.imwrite("//scratchbeta/salehia/tmp//solution.png", behavior_info)
         #pdb.set_trace()
         return fitness, bd, task_solved
 

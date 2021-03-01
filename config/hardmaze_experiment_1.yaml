@@ -1,11 +1,11 @@
 ---
 hyperparams: 
-  population_size: 100
-  offspring_size: 100
+  population_size: 25
+  offspring_size: 25
   k: 15 #k of the k-nn in archive-based novelty estimation. Robust value from Gomes' paper is ~15
   num_generations: 400
 novelty_estimator:
-  type: "learned" #choiceas are "learned", "archive_based"
+  type: "archive_based" #choiceas are "learned", "archive_based"
 archive:
   type : "list_based" 
   growth_rate: 6  #Gomes' paper ~6
@@ -24,13 +24,13 @@ problem:
   name: "hardmaze" 
   bd_type: "generic" #choices are learned, learned_frozen, engineered, generic
   max_steps: 2000
-  assets: {"env_im":"/home/achkan/misc_experiments/guidelines_paper/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
+  assets: {"env_im":"/home/salehia/envs/generalisation_env/misc_libs/noveltysearchlib/environments/env_assets/maze_hard.pbm"} # key-values here are based on problem type
 population:
   individual_type: "simple_fw_fc" 
 use_scoop: 1 #when set to 1, run the script with -mi scoop script.py config
 visualise_bds: 1 # 0 disable, 1 to logfile, 2 display
 ns_log_root_tmp: "/home/achkan//misc_experiments/guidelines_log/for_open_source_code/learnt_deceptive_maze/"
-ns_log_root: "/tmp/" #directory where NS will create a log directory based on its main pid
+ns_log_root: "/scratchbeta/salehia/" #directory where NS will create a log directory based on its main pid
 save_checkpoints: 0 # 0 don't save, k save every k generations
 stop_when_task_solved: 0 #
 compute_parent_child_stats: 1 # 0 or 1
