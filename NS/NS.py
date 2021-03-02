@@ -222,7 +222,7 @@ class NoveltySearch:
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
             #self.problem.visualise_bds(parents, offsprings, quitely=True, save_to=self.log_dir_path )
-            MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
+            #MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
                                                                                      ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
                                                                                      ############## in comparisons, but this is not clean at all, so yeah, change that
             

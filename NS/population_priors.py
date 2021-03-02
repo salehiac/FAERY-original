@@ -61,7 +61,7 @@ def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory):
     kept=random.sample(range(len(mutated_genotype)), k=num_s)
     for i in range(len(kept)):
         mutated_ags[i]._parent_idx=-1 #we don't care
-        mutated_ags[i]._root=mutated_ags[i]._idx#it is itself the root of an evolutionnary path
+        mutated_ags[i]._root=mutated_genotype[kept[i]][2]
         mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])
         mutated_ags[i]._created_at_gen=-1#we don't care
        
@@ -153,7 +153,7 @@ class MetaQDForSparseRewards:
 
         self.pop=initial_pop
 
-        self.inner_selector=functools.partial(MiscUtils.selBest,k=pop_sz,automatic_threshold=False)
+        self.inner_selector=functools.partial(MiscUtils.selBest,k=pop_sz*2,automatic_threshold=False)
 
         #deap setups
         deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
@@ -178,9 +178,8 @@ class MetaQDForSparseRewards:
 
             tmp_pop=self.pop + offsprings
             
-            evolution_table=-1*np.ones([len(tmp_pop), self.G_inner])#evolution_table[i,d]=k  means that environment k was solved at depth (inner_generation) d by 
-                                                                    #mutating original agent i
 
+            evolution_table=-1*np.ones([len(self.pop), len(pbs)]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
 
             for pb_i in range(len(pbs)):#we can't do that in parallel as the QD algos in this for loop already need that parallelism 
                 self.inner_loop(pbs[pb_i],
@@ -233,8 +232,7 @@ class MetaQDForSparseRewards:
             if not disable_testing:
                 test_pbs=self.test_sampler(num_samples=self.num_test_samples)
                 
-                test_evolution_table=-1*np.ones([self.pop_sz, self.G_inner])#evolution_table[i,d]=k  means that environment k was solved at depth (inner_generation) d by 
-                                                                            #mutating original agent i
+                test_evolution_table=-1*np.ones([self.pop_sz, len(test_pbs)])
 
                 for pb_i_test in range(len(test_pbs)):#we can't do that in parallel as the QD algos in this for loop already need that parallelism 
                     self.inner_loop(test_pbs[pb_i_test],
@@ -282,7 +280,7 @@ class MetaQDForSparseRewards:
                 agent_factory=self.make_ag,
                 visualise_bds_flag=1,#log to file
                 map_type="scoop",#or "std"
-                logs_root="//scratchbeta/salehia/tmp//",
+                logs_root="//scratchbeta/salehia/tmp_NS_2//",
                 compute_parent_child_stats=0,
                 initial_pop=[x for x in population])
         #do NS
@@ -304,7 +302,7 @@ class MetaQDForSparseRewards:
                 idx_to_individual[sol._root]._useful_evolvability+=1
                 idx_to_individual[sol._root]._adaptation_speed_lst.append(depth)
 
-            evolution_table_to_update[idx_to_row[sol._root], depth]=in_problem_idx
+            evolution_table_to_update[idx_to_row[sol._root], in_problem_idx]=depth
 
 
     def show_evolution_table(self, gen, table):
@@ -315,19 +313,101 @@ class MetaQDForSparseRewards:
         MiscUtils.plot_matrix_with_textual_values(table[gen],x_ticks,y_ticks)
 
 
+    def test_population(self,
+        population,
+        in_problem):
+        """
+        used for a posteriori testing after training is done
+        """
+      
+        population_size=len(population)
+        offsprings_size=population_size
+        
+        nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
+        arch=Archives.ListArchive(max_size=5000,
+                growth_rate=6,
+                growth_strategy="random",
+                removal_strategy="random")
+ 
+        ns=NS.NoveltySearch(archive=arch,
+                nov_estimator=nov_estimator,
+                mutator=self.mutator,
+                problem=in_problem,
+                selector=self.inner_selector,
+                n_pop=population_size,
+                n_offspring=offsprings_size,
+                agent_factory=self.make_ag,
+                visualise_bds_flag=1,#log to file
+                map_type="scoop",#or "std"
+                logs_root="//scratchbeta/salehia/test_dir_tmp//",
+                compute_parent_child_stats=0,
+                initial_pop=[x for x in population])
+        #do NS
+        nov_estimator.log_dir=ns.log_dir_path
+        ns.disable_tqdm=True
+        ns.save_archive_to_file=False
+        _, solutions=ns(iters=self.G_inner,
+                stop_on_reaching_task=True,#this should NEVER be False in this algorithm
+                save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
+
+        
+        assert len(solutions.keys())<=1, "solutions should only contain solutions from a single generation"
+        if len(solutions.keys()):
+          depth=list(solutions.keys())[0]
+        else:
+          depth=100000
+
+        return depth
+
+
 if __name__=="__main__":
 
-    TEST_WITH_RANDOM_2D_MAZES=True
+    TRAIN_WITH_RANDOM_2D_MAZES=True
+    TEST_FROM_POP_ONLY=False
     
-    if TEST_WITH_RANDOM_2D_MAZES:
+    if TRAIN_WITH_RANDOM_2D_MAZES:
 
-        #train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
-        #test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
+        train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
+        test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
+
+        num_train_samples=60
+        num_test_samples=20
+
+        train_sampler=functools.partial(HardMaze.sample_mazes,
+                G=8, 
+                xml_template_path="../environments/env_assets/maze_template.xml",
+                tmp_dir="//scratchbeta/salehia/tmp//",
+                from_dataset=train_dataset_path,
+                random_goals=False)
+        
+        
+        test_sampler=functools.partial(HardMaze.sample_mazes,
+                G=8, 
+                xml_template_path="../environments/env_assets/maze_template.xml",
+                tmp_dir="//scratchbeta/salehia/tmp//",
+                from_dataset=test_dataset_path,
+                random_goals=False)
+
+        algo=MetaQDForSparseRewards(pop_sz=45,
+                off_sz=45,
+                G_outer=100,
+                G_inner=200,
+                train_sampler=train_sampler,
+                test_sampler=test_sampler,
+                num_train_samples=num_train_samples,
+                num_test_samples=num_test_samples,
+                agent_type="feed_forward",
+                top_level_log_root="/scratchbeta/salehia/generalisation_paper/")
+
+        algo()
+    
+    elif TEST_FROM_POP_ONLY:
+
         train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
         test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
 
         num_train_samples=75
-        num_test_samples=25
+        num_test_samples=1
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
@@ -355,5 +435,33 @@ if __name__=="__main__":
                 agent_type="feed_forward",
                 top_level_log_root="/scratchbeta/salehia/generalisation_paper/")
 
-        algo()
+
+        population_dir=sys.argv[1]
+        pop_fls=os.listdir(population_dir)
+        pop_fls=[x for x in pop_fls if "population_prior_" in x]
+
+        test_pbs=test_sampler(num_samples=num_test_samples)
+
+        population_solutions=[]#population_solutions[i,j]==depth at which population i solves problem j
+        for i in range(len(pop_fls)):
+          pfl=pop_fls[i]
+          with open(population_dir+"/"+pfl,"rb") as fl:
+            population_to_test=pickle.load(fl)
+         
+          pb_solutions=[]
+          for pb_i in range(len(test_pbs)):
+            depth_val=algo.test_population(population_to_test, test_pbs[pb_i])
+            pb_solutions.append(depth_val)
+          population_solutions.append(pb_solutions)
+
+        population_solutions=np.array(population_solutions)
+        np.savez_compressed("/home/salehia/population_solutions",population_solutions)
+
+
+
+
+
+
+
+
 
