@@ -229,7 +229,7 @@ class MetaQDForSparseRewards:
             np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g), self.evolution_tables_train[-1])
 
 
-            if not disable_testing:
+            if outer_g%10==0 and not disable_testing:
                 test_pbs=self.test_sampler(num_samples=self.num_test_samples)
                 
                 test_evolution_table=-1*np.ones([self.pop_sz, len(test_pbs)])
@@ -280,7 +280,7 @@ class MetaQDForSparseRewards:
                 agent_factory=self.make_ag,
                 visualise_bds_flag=1,#log to file
                 map_type="scoop",#or "std"
-                logs_root="//scratchbeta/salehia/tmp_NS_2//",
+                logs_root="//scratchbeta/salehia/tmp_NS//",
                 compute_parent_child_stats=0,
                 initial_pop=[x for x in population])
         #do NS
@@ -370,8 +370,8 @@ if __name__=="__main__":
         train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
         test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
 
-        num_train_samples=60
-        num_test_samples=20
+        num_train_samples=10
+        num_test_samples=25
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
@@ -388,10 +388,10 @@ if __name__=="__main__":
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
-        algo=MetaQDForSparseRewards(pop_sz=45,
-                off_sz=45,
+        algo=MetaQDForSparseRewards(pop_sz=24,
+                off_sz=24,
                 G_outer=100,
-                G_inner=200,
+                G_inner=150,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
