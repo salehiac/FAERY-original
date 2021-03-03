@@ -13,6 +13,7 @@ def read_tables_and_meta_agents(dir_name):
     test_table_fs=sorted([dir_name+"/"+x for x in fns if "evolution_table_test" in x])
     pop_fs=sorted([dir_name+"/"+x for x in fns if "population_prior" in x ])
 
+
     train_tables=[]
     for fn in train_table_fs:
         print("loading ",fn)
@@ -40,15 +41,25 @@ def read_tables_and_meta_agents(dir_name):
 
     return train_tables, test_tables, agents
 
-def plot_tables(tb_list,msg):
+
+def plot_tables(tb_list,msg, save_dir=""):
     for i in range(len(tb_list)):
+        if i%10==0:
+            print("i==",i)
         plt.imshow(tb_list[i]);
         plt.title(f"table {i} "+msg )
-        plt.show()
+        if not save_dir:
+            plt.show()
+        else:
+            plt.savefig(f"{save_dir}/fig_{i}.png")
+        plt.close()
+
 
 if __name__=="__main__":
 
     t_train, t_test, agents = read_tables_and_meta_agents(sys.argv[1])
 
+    #plot_tables(t_train, "(train)", save_dir="/tmp/dump_local_train/")
     plot_tables(t_train, "(train)")
+    #plot_tables(t_test, "(test)",save_dir="/tmp/dump_local_test/")
     plot_tables(t_test, "(test)")

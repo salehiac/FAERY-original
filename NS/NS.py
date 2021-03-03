@@ -182,7 +182,7 @@ class NoveltySearch:
 
             offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
             task_solvers, _ =self.eval_agents(offsprings)
-            
+           
             pop=parents+offsprings #all of them have _fitness and _behavior_descr now
 
             for x in pop:
@@ -235,7 +235,6 @@ class NoveltySearch:
             tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
             tqdm_gen.refresh()
        
-        #pdb.set_trace()
         return parents, self.task_solvers#iteration:list_of_agents
 
 
@@ -255,7 +254,6 @@ class NoveltySearch:
             mutated_ags[i]._created_at_gen=generation
             mutated_ags[i]._root=mutated_genotype[kept[i]][2]
        
-        #pdb.set_trace()
         return mutated_ags
     
     def visualise_bds(self, agents):

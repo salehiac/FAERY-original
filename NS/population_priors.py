@@ -191,7 +191,7 @@ class MetaQDForSparseRewards:
 
         self.pop=initial_pop
 
-        self.inner_selector=functools.partial(MiscUtils.selBest,k=pop_sz*2,automatic_threshold=False)
+        self.inner_selector=functools.partial(MiscUtils.selBest,k=2*pop_sz,automatic_threshold=False)
 
         #deap setups
         deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
