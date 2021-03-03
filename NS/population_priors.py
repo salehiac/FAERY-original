@@ -66,7 +66,55 @@ def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory):
         mutated_ags[i]._created_at_gen=-1#we don't care
        
     return mutated_ags
-    
+  
+  
+def ns_instance(in_problem,
+    population,
+    mutator,
+    inner_selector,
+    make_ag,
+    G_inner):
+      
+  #those are population sizes for the QD algorithms, which are different from the top-level one
+  population_size=len(population)
+  offsprings_size=population_size
+  
+  nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
+  arch=Archives.ListArchive(max_size=5000,
+          growth_rate=6,
+          growth_strategy="random",
+          removal_strategy="random")
+ 
+  ns=NS.NoveltySearch(archive=arch,
+          nov_estimator=nov_estimator,
+          mutator=mutator,
+          problem=in_problem,
+          selector=inner_selector,
+          n_pop=population_size,
+          n_offspring=offsprings_size,
+          agent_factory=make_ag,
+          visualise_bds_flag=1,#log to file
+          map_type="scoop",#or "std"
+          logs_root="//scratchbeta/salehia/tmp_NS_distributed//",
+          compute_parent_child_stats=0,
+          initial_pop=[x for x in population])
+  #do NS
+  nov_estimator.log_dir=ns.log_dir_path
+  ns.disable_tqdm=True
+  ns.save_archive_to_file=False
+  _, solutions=ns(iters=G_inner,
+          stop_on_reaching_task=True,#this should NEVER be False in this algorithm (at least with the current implementation)
+          save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
+
+  if not len(solutions.keys()):#environment wasn't solved
+      return [],-1
+
+  assert len(solutions.keys())==1, "solutions should only contain solutions from a single generation"
+  depth=list(solutions.keys())[0]
+
+  roots=[sol._root for sol in solutions[depth]]
+
+  return roots, depth
 
 class MetaQDForSparseRewards:
     """
@@ -148,6 +196,8 @@ class MetaQDForSparseRewards:
         self.make_ag=make_ag
 
         self.mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=10, low=-1.0, up=1.0, indpb=0.1)
+
+        ###NOTE: if at some point you add the possibility of resuming from an already given pop, don't forget to rest their _useful_evolvability etc to 0/infinity whatever
         initial_pop=[self.make_ag() for i in range(pop_sz)]
         initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, self.make_ag)
 
@@ -162,13 +212,17 @@ class MetaQDForSparseRewards:
 
         self.evolution_tables_train=[]
         self.evolution_tables_test=[]
-        
-        
-
+      
+      
     def __call__(self):
         """
         Outer loop of the meta algorithm
+        
+        While each QD problem inside the inner loop is paralellised, the optimisations on the T sampled environments have been performed sequentially.
+        Here's an attempt at parallelising that which, just now, is based on hoping that scoop handles future maps inside future maps well
         """
+
+
         disable_testing=False
 
         for outer_g in range(self.G_outer):
@@ -176,29 +230,44 @@ class MetaQDForSparseRewards:
 
             offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, self.make_ag)
 
-            tmp_pop=self.pop + offsprings
+            tmp_pop=self.pop + offsprings #don't change the order of this concatenation
             
 
             evolution_table=-1*np.ones([len(self.pop), len(pbs)]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
+            idx_to_row=[self.pop[i]._idx:i for i in range(len(self.pop))]
 
-            for pb_i in range(len(pbs)):#we can't do that in parallel as the QD algos in this for loop already need that parallelism 
-                self.inner_loop(pbs[pb_i],
-                        pb_i,
-                        tmp_pop,#should be passed by ref here
-                        evolution_table,
-                        test_mode=False)
-    
+            metadata=futures.map(ns_instance,
+                pbs,#in_problem
+                [[x for x in tmp_pop] for i in range(len(pbs))],#population
+                [self.mutator for i in range(len(pbs))],#mutator
+                [self.inner_selector for i in range(len(pbs))],#inner_selector
+                [self.make_ag for i in range(len(pbs))],#make_ag
+                [self.G_inner for i in range(len(pbs))])#G_inner
+
+            roots_lst=metadata[0]
+            depth_lst=metadata[1]
+  
+            idx_to_individual={x._idx:x for x in tmp_pop}
+
+            for pb_i in range(len(pbs)):
+              rt_i=roots_lst[pb_i]
+              d_i=depth_lst[pb_i]
+              for rt in rt_i:
+                idx_to_individual[rt]._useful_evolvability+=1
+                idx_to_individual[rt]._adaptation_speed_lst.append(d_i)
+                evolution_table[idx_to_row[rt], pb_i]=d_i
+
 
             self.evolution_tables_train.append(evolution_table)
             for ind in tmp_pop:
                 if len(ind._adaptation_speed_lst):
                     ind._mean_adaptation_speed=np.mean(ind._adaptation_speed_lst)
             
-            display_f0=[x._useful_evolvability for x in tmp_pop]
-            display_f1=[x._mean_adaptation_speed for x in tmp_pop]
-            print("_useful_evolvability TMP_POP \n",display_f0)
-            print("_mean_adaptation_speed TMP_POP\n",display_f1)
-            print("================================================================================")
+            #display_f0=[x._useful_evolvability for x in tmp_pop]
+            #display_f1=[x._mean_adaptation_speed for x in tmp_pop]
+            #print("_useful_evolvability TMP_POP \n",display_f0)
+            #print("_mean_adaptation_speed TMP_POP\n",display_f1)
+            #print("================================================================================")
              
             #now the meta training part
             light_pop=[]
@@ -212,106 +281,45 @@ class MetaQDForSparseRewards:
 
             self.pop=[tmp_pop[u] for u in chosen_inds]
             
-            display_f0=[x._useful_evolvability for x in self.pop]
-            display_f1=[x._mean_adaptation_speed for x in self.pop]
-
-            print("_useful_evolvability POP \n",display_f0)
-            print("_mean_adaptation_speed POP \n",display_f1)
-            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+            #display_f0=[x._useful_evolvability for x in self.pop]
+            #display_f1=[x._mean_adaptation_speed for x in self.pop]
+            #print("_useful_evolvability POP \n",display_f0)
+            #print("_mean_adaptation_speed POP \n",display_f1)
+            #print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+            
+            with open(self.top_level_log+"/population_prior_"+str(outer_g),"wb") as fl:
+                pickle.dump(self.pop, fl)
+            np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g), self.evolution_tables_train[-1])
+            
             #reset evolvbility and adaptation stats
             for ind in self.pop:
                 ind._useful_evolvability=0
                 ind._mean_adaptation_speed=float("inf")
                 ind._adaptation_speed_lst=[]
 
-            with open(self.top_level_log+"/population_prior_"+str(outer_g),"wb") as fl:
-                pickle.dump(self.pop, fl)
-            np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g), self.evolution_tables_train[-1])
-
-
+           
             if outer_g%10==0 and not disable_testing:
                 test_pbs=self.test_sampler(num_samples=self.num_test_samples)
                 
                 test_evolution_table=-1*np.ones([self.pop_sz, len(test_pbs)])
-
-                for pb_i_test in range(len(test_pbs)):#we can't do that in parallel as the QD algos in this for loop already need that parallelism 
-                    self.inner_loop(test_pbs[pb_i_test],
-                            pb_i_test,
-                            self.pop,
-                            test_evolution_table,
-                            test_mode=True)
+                idx_to_row_test=[self.pop[i]._idx:i for i in range(len(self.pop))]
+                
+                test_metadata=futures.map(ns_instance,
+                    test_pbs,#in_problem
+                    [[x for x in self.pop] for i in range(len(test_pbs))],#population
+                    [self.mutator for i in range(len(test_pbs))],#mutator
+                    [self.inner_selector for i in range(len(test_pbs))],#inner_selector
+                    [self.make_ag for i in range(len(test_pbs))],#make_ag
+                    [self.G_inner for i in range(len(test_pbs))])#G_inner
+                
+                for pb_t in range(len(test_pbs)):
+                  rt_t=test_metadata[0][pb_t]
+                  d_t=test_metadata[1][pb_t]
+                  for rt in rt_t:
+                    test_evolution_table[idx_to_row_test[rt], pb_t]=d_t
 
                 self.evolution_tables_test.append(test_evolution_table)
                 np.savez_compressed(self.top_level_log+"/evolution_table_test_"+str(outer_g), self.evolution_tables_test[-1])
-
-
-    def inner_loop(self, 
-            in_problem,
-            in_problem_idx,
-            population,
-            evolution_table_to_update,
-            test_mode):
-        """
-        evolution_table_to_update is just used for visualisation
-        test_mode disable updates to the functions that NSGA2 takes in the top-level (meta) loop
-        """
-      
-        #those are population sizes for the QD algorithms, which are different from the top-level one
-        population_size=len(population)
-        offsprings_size=population_size
-        
-        
-        idx_to_individual={x._idx:x for x in population}
-        idx_to_row={population[i]._idx:i for i in range(population_size)}
-       
-        nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
-        arch=Archives.ListArchive(max_size=5000,
-                growth_rate=6,
-                growth_strategy="random",
-                removal_strategy="random")
- 
-        ns=NS.NoveltySearch(archive=arch,
-                nov_estimator=nov_estimator,
-                mutator=self.mutator,
-                problem=in_problem,
-                selector=self.inner_selector,
-                n_pop=population_size,
-                n_offspring=offsprings_size,
-                agent_factory=self.make_ag,
-                visualise_bds_flag=1,#log to file
-                map_type="scoop",#or "std"
-                logs_root="//scratchbeta/salehia/tmp_NS//",
-                compute_parent_child_stats=0,
-                initial_pop=[x for x in population])
-        #do NS
-        nov_estimator.log_dir=ns.log_dir_path
-        ns.disable_tqdm=True
-        ns.save_archive_to_file=False
-        _, solutions=ns(iters=self.G_inner,
-                stop_on_reaching_task=True,#this should NEVER be False in this algorithm
-                save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
-
-        if not len(solutions.keys()):
-            print(colored("[NS warning] An environement remained unsolved. This can happen, but it should remain very rare.","red",attrs=["bold"]))
-            return
-
-        assert len(solutions.keys())==1, "solutions should only contain solutions from a single generation"
-        depth=list(solutions.keys())[0]
-        for sol in solutions[depth]:
-            if not test_mode:
-                idx_to_individual[sol._root]._useful_evolvability+=1
-                idx_to_individual[sol._root]._adaptation_speed_lst.append(depth)
-
-            evolution_table_to_update[idx_to_row[sol._root], in_problem_idx]=depth
-
-
-    def show_evolution_table(self, gen, table):
-
-        x_ticks=[f"$\theta_{i}$" for i in range(table[gen].shape[0])]
-        y_ticks=[f"$d_{i}$" for i in range(table[gen].shape[1])]
-
-        MiscUtils.plot_matrix_with_textual_values(table[gen],x_ticks,y_ticks)
-
 
     def test_population(self,
         population,
@@ -397,7 +405,7 @@ if __name__=="__main__":
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_type="feed_forward",
-                top_level_log_root="/scratchbeta/salehia/generalisation_paper/")
+                top_level_log_root="/scratchbeta/salehia/generalisation_paper/distributed/")
 
         algo()
     
