@@ -154,14 +154,14 @@ class Maze:
 
 if __name__=="__main__":
 
-    num_mazes=600
+    num_mazes=1200
     maze=Maze(8)
     for i in range(num_mazes):
         maze.generate()
         #maze.show()
-        maze.save("/tmp/mazes_8x8_train/")
+        maze.save("/scratchbeta/salehia/mazes_8x8_train/")
         
-    for i in range(100):
+    for i in range(200):
         maze.generate()
         #maze.show()
-        maze.save("/tmp/mazes_8x8_test/")
+        maze.save("/scratchbeta/salehia/mazes_8x8_test/")

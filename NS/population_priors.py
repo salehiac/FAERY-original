@@ -113,7 +113,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/tmp/",
+            logs_root="/scratchbeta/salehia/distributed/NS_LOGS/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -161,7 +161,7 @@ class MetaQDForSparseRewards:
             test_sampler,
             num_train_samples,
             num_test_samples,
-            top_level_log_root="//scratchbeta/salehia/tmp//"):
+            top_level_log_root="//scratchbeta/salehia/mqd_tmp//"):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on test data, but on meta observations from the inner loop. So the
         test_sampler here is used for the evaluation of the meta algorithm, not for learning.
@@ -384,24 +384,27 @@ if __name__=="__main__":
 
         #train_dataset_path="/home/achkan/datasets//mazes_8x8_train"
         #test_dataset_path="/home/achkan/datasets//mazes_8x8_test"
-        train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
-        test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
+        #train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
+        #test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
 
-        num_train_samples=2
-        num_test_samples=2
+        train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train/"
+        test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test/"
+
+        num_train_samples=40
+        num_test_samples=25
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
-                G=6, 
+                G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//tmp/garbage//",
+                tmp_dir="/scratchbeta/salehia/garbage_dir//",
                 from_dataset=train_dataset_path,
                 random_goals=False)
         
         
         test_sampler=functools.partial(HardMaze.sample_mazes,
-                G=6, 
+                G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="/tmp/garbage/",
+                tmp_dir="/scratchbeta/salehia/garbage_dir/",
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
@@ -413,7 +416,7 @@ if __name__=="__main__":
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
-                top_level_log_root="/tmp/distributed/")
+                top_level_log_root="/scratchbeta/salehia/distributed/meta_LOGS/")
 
         algo()
     
@@ -428,7 +431,7 @@ if __name__=="__main__":
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//scratchbeta/salehia/tmp//",
+                tmp_dir="//scratchbeta/salehia/garbage_dir//",
                 from_dataset=train_dataset_path,
                 random_goals=False)
         
@@ -436,7 +439,7 @@ if __name__=="__main__":
         test_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//scratchbeta/salehia/tmp//",
+                tmp_dir="//scratchbeta/salehia/garbage_dir//",
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
