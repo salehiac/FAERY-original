@@ -366,8 +366,8 @@ if __name__=="__main__":
         train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
         test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
 
-        num_train_samples=1
-        num_test_samples=1
+        num_train_samples=2
+        num_test_samples=2
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
