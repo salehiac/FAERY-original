@@ -38,7 +38,7 @@ def _mutate_initial_prior_pop(parents, mutator, agent_factory):
     mutated_genotype=[(parents_as_list[i][0], mutator(copy.deepcopy(parents_as_list[i][1]))) for i in parents_to_mutate]#deepcopy is because of deap
 
     num_s=len(parents_as_list)
-    mutated_ags=[agent_factory() for x in range(num_s)]
+    mutated_ags=[agent_factory(x) for x in range(num_s)]#we replace the previous parents so we also replace the _idx
     for i in range(num_s):
         mutated_ags[i]._parent_idx=-1
         mutated_ags[i]._root=mutated_ags[i]._idx#it is itself the root of an evolutionnary path
@@ -47,9 +47,11 @@ def _mutate_initial_prior_pop(parents, mutator, agent_factory):
     
     return mutated_ags
     
-def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory):
+def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory, total_num_ags):
     """
     mutations for the prior (top-level population)
+
+    total_num_ags  is for book-keeping with _idx, it replaces the previous class variable num_instances for agents which was problematic with multiprocessing/multithreading
     """
        
     parents_as_list=[(x._idx, x.get_flattened_weights(), x._root) for x in parents]
@@ -57,7 +59,7 @@ def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory):
     mutated_genotype=[(parents_as_list[i][0], mutator(copy.deepcopy(parents_as_list[i][1])), parents_as_list[i][2]) for i in parents_to_mutate]#deepcopy is because of deap
 
     num_s=n_offspring
-    mutated_ags=[agent_factory() for x in range(num_s)]
+    mutated_ags=[agent_factory(total_num_ags+x) for x in range(num_s)]
     kept=random.sample(range(len(mutated_genotype)), k=num_s)
     for i in range(len(kept)):
         mutated_ags[i]._parent_idx=-1 #we don't care
@@ -66,65 +68,73 @@ def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory):
         mutated_ags[i]._created_at_gen=-1#we don't care
        
     return mutated_ags
+
+def _make_2d_maze_ag(ag_idx):
+    """
+    because scoop only likes top-level functions/objects...
+    """
+    agt=Agents.SmallFC_FW(ag_idx,
+            in_d=5,
+            out_d=2,
+            num_hidden=3,
+            hidden_dim=10,
+            output_normalisation="")
+    return agt
+
+
+
+def ns_instance(
+        sampler,
+        population,
+        mutator,
+        inner_selector,
+        make_ag,
+        G_inner):
+    """
+    problems are now sampled in the NS constructor
+    """
+    #those are population sizes for the QD algorithms, which are different from the top-level one
+    population_size=len(population)
+    offsprings_size=population_size
   
-def _make_2d_maze_ag():
-  """
-  because scoop only likes top-level functions/objects...
-  """
-  return Agents.SmallFC_FW(in_d=5,
-      out_d=2,
-      num_hidden=3,
-      hidden_dim=10,
-      output_normalisation="")
-
-def ns_instance(in_problem,
-    population,
-    mutator,
-    inner_selector,
-    make_ag,
-    G_inner):
-      
-  #those are population sizes for the QD algorithms, which are different from the top-level one
-  population_size=len(population)
-  offsprings_size=population_size
-  
-  nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
-  arch=Archives.ListArchive(max_size=5000,
-          growth_rate=6,
-          growth_strategy="random",
-          removal_strategy="random")
- 
-  ns=NS.NoveltySearch(archive=arch,
-          nov_estimator=nov_estimator,
-          mutator=mutator,
-          problem=in_problem,
-          selector=inner_selector,
-          n_pop=population_size,
-          n_offspring=offsprings_size,
-          agent_factory=make_ag,
-          visualise_bds_flag=1,#log to file
-          map_type="scoop",#or "std"
-          logs_root="//scratchbeta/salehia/tmp_NS_distributed//",
-          compute_parent_child_stats=0,
-          initial_pop=[x for x in population])
-  #do NS
-  nov_estimator.log_dir=ns.log_dir_path
-  ns.disable_tqdm=True
-  ns.save_archive_to_file=False
-  _, solutions=ns(iters=G_inner,
-          stop_on_reaching_task=True,#this should NEVER be False in this algorithm (at least with the current implementation)
-          save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
-
-  if not len(solutions.keys()):#environment wasn't solved
-      return [],-1
-
-  assert len(solutions.keys())==1, "solutions should only contain solutions from a single generation"
-  depth=list(solutions.keys())[0]
-
-  roots=[sol._root for sol in solutions[depth]]
-
-  return roots, depth
-
+    nov_estimator= NoveltyEstimators.ArchiveBasedNoveltyEstimator(k=15)
+    arch=Archives.ListArchive(max_size=5000,
+            growth_rate=6,
+            growth_strategy="random",
+            removal_strategy="random")
+    
+    ns=NS.NoveltySearch(archive=arch,
+            nov_estimator=nov_estimator,
+            mutator=mutator,
+            problem=None,
+            selector=inner_selector,
+            n_pop=population_size,
+            n_offspring=offsprings_size,
+            agent_factory=make_ag,
+            visualise_bds_flag=1,#log to file
+            map_type="scoop",#or "std"
+            logs_root="/tmp/",
+            compute_parent_child_stats=0,
+            initial_pop=[x for x in population],
+            problem_sampler=sampler)
+    #do NS
+    nov_estimator.log_dir=ns.log_dir_path
+    ns.disable_tqdm=True
+    ns.save_archive_to_file=False
+    _, solutions=ns(iters=G_inner,
+            stop_on_reaching_task=True,#this should NEVER be False in this algorithm (at least with the current implementation)
+            save_checkpoints=0)#save_checkpoints is not implemented but other functions already do its job
+    
+    if not len(solutions.keys()):#environment wasn't solved
+        return [],-1
+    
+    assert len(solutions.keys())==1, "solutions should only contain solutions from a single generation"
+    depth=list(solutions.keys())[0]
+    
+    roots=[sol._root for sol in solutions[depth]]
+    
+    return roots, depth
+    
 class MetaQDForSparseRewards:
     """
     Note: is it really a meta algorithm?
@@ -186,8 +196,9 @@ class MetaQDForSparseRewards:
         self.mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=10, low=-1.0, up=1.0, indpb=0.1)
 
         ###NOTE: if at some point you add the possibility of resuming from an already given pop, don't forget to rest their _useful_evolvability etc to 0/infinity whatever
-        initial_pop=[_make_2d_maze_ag() for i in range(pop_sz)]
+        initial_pop=[_make_2d_maze_ag(i) for i in range(pop_sz)]
         initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, _make_2d_maze_ag)
+        self.num_total_agents=pop_sz#total number of generated agents from now on (including discarded agents)
 
         self.pop=initial_pop
 
@@ -214,30 +225,37 @@ class MetaQDForSparseRewards:
         disable_testing=False
 
         for outer_g in range(self.G_outer):
-            pbs=self.train_sampler(num_samples=self.num_train_samples)
 
-            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, _make_2d_maze_ag)
+            #Note: problems are no longer sampled here. The reason is that libfastsim doesn't have proper copy constructors for map environments (goals and illuminated switches are reinitialised 
+            #to empty std vectors) and this is problematic for usage with scoop as scoop's map function deep copies everything (you can create shared memory objects, but just at initialisation
+            #and then you can't modify them - also it seems that it still does make deep copies of them). With deepcopies, the goals from the map (e.g. from HardMaze) are removed and 
+            #it ends up segfaulting or throwing exceptions. 
+            #
+            #Now, problems are sampled from the constructor of each NS instance.
+          
+            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, _make_2d_maze_ag, self.num_total_agents)
+            self.num_total_agents+=self.off_sz
 
             tmp_pop=self.pop + offsprings #don't change the order of this concatenation
             
 
-            evolution_table=-1*np.ones([len(self.pop), len(pbs)]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
+            evolution_table=-1*np.ones([len(self.pop), self.num_train_samples]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
             idx_to_row={self.pop[i]._idx:i for i in range(len(self.pop))}
 
             metadata=list(futures.map(ns_instance,
-                pbs,#in_problem
-                [[x for x in tmp_pop] for i in range(len(pbs))],#population
-                [self.mutator for i in range(len(pbs))],#mutator
-                [self.inner_selector for i in range(len(pbs))],#inner_selector
-                [_make_2d_maze_ag for i in range(len(pbs))],#make_ag
-                [self.G_inner for i in range(len(pbs))]))#G_inner
+                [self.train_sampler for i in range(self.num_train_samples)],
+                [[x for x in tmp_pop] for i in range(self.num_train_samples)],#population
+                [self.mutator for i in range(self.num_train_samples)],#mutator
+                [self.inner_selector for i in range(self.num_train_samples)],#inner_selector
+                [_make_2d_maze_ag for i in range(self.num_train_samples)],#make_ag
+                [self.G_inner for i in range(self.num_train_samples)]))#G_inner
 
             roots_lst=[m[0] for m in metadata]
             depth_lst=[m[1] for m in metadata]
   
             idx_to_individual={x._idx:x for x in tmp_pop}
 
-            for pb_i in range(len(pbs)):
+            for pb_i in range(self.num_train_samples):
               rt_i=roots_lst[pb_i]
               d_i=depth_lst[pb_i]
               for rt in rt_i:
@@ -287,20 +305,19 @@ class MetaQDForSparseRewards:
 
            
             if outer_g%10==0 and not disable_testing:
-                test_pbs=self.test_sampler(num_samples=self.num_test_samples)
                 
-                test_evolution_table=-1*np.ones([self.pop_sz, len(test_pbs)])
+                test_evolution_table=-1*np.ones([self.pop_sz, self.num_test_samples])
                 idx_to_row_test={self.pop[i]._idx:i for i in range(len(self.pop))}
                 
                 test_metadata=list(futures.map(ns_instance,
-                    test_pbs,#in_problem
-                    [[x for x in self.pop] for i in range(len(test_pbs))],#population
-                    [self.mutator for i in range(len(test_pbs))],#mutator
-                    [self.inner_selector for i in range(len(test_pbs))],#inner_selector
-                    [_make_2d_maze_ag for i in range(len(test_pbs))],#make_ag
-                    [self.G_inner for i in range(len(test_pbs))]))#G_inner
+                    [self.test_sampler for i in range(self.num_test_samples)],
+                    [[x for x in self.pop] for i in range(self.num_test_samples)],#population
+                    [self.mutator for i in range(self.num_test_samples)],#mutator
+                    [self.inner_selector for i in range(self.num_test_samples)],#inner_selector
+                    [_make_2d_maze_ag for i in range(self.num_test_samples)],#make_ag
+                    [self.G_inner for i in range(self.num_test_samples)]))#G_inner
                 
-                for pb_t in range(len(test_pbs)):
+                for pb_t in range(self.num_test_samples):
                   rt_t=test_metadata[pb_t][0]
                   d_t=test_metadata[pb_t][1]
                   for rt in rt_t:
@@ -314,6 +331,8 @@ class MetaQDForSparseRewards:
         in_problem):
         """
         used for a posteriori testing after training is done
+
+        make sure in_problem is passed by reference
         """
       
         population_size=len(population)
@@ -363,24 +382,26 @@ if __name__=="__main__":
     
     if TRAIN_WITH_RANDOM_2D_MAZES:
 
-        train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
-        test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
+        #train_dataset_path="/home/achkan/datasets//mazes_8x8_train"
+        #test_dataset_path="/home/achkan/datasets//mazes_8x8_test"
+        train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
+        test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
 
         num_train_samples=2
         num_test_samples=2
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
-                G=8, 
+                G=6, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//scratchbeta/salehia/tmp//",
+                tmp_dir="//tmp/garbage//",
                 from_dataset=train_dataset_path,
                 random_goals=False)
         
         
         test_sampler=functools.partial(HardMaze.sample_mazes,
-                G=8, 
+                G=6, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//scratchbeta/salehia/tmp//",
+                tmp_dir="/tmp/garbage/",
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
@@ -392,7 +413,7 @@ if __name__=="__main__":
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
-                top_level_log_root="/scratchbeta/salehia/generalisation_paper/distributed/")
+                top_level_log_root="/tmp/distributed/")
 
         algo()
     

@@ -34,7 +34,6 @@ from scoop import futures
 import yaml
 import argparse
 from termcolor import colored
-import tqdm
 #import cv2
 
 import Archives
@@ -63,16 +62,18 @@ class NoveltySearch:
             map_type="scoop",
             logs_root="/tmp/ns_log/",
             compute_parent_child_stats=False,
-            initial_pop=[]):
+            initial_pop=[],
+            problem_sampler=None):
         """
         archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
         nov_estimator                NoveltyEstimator  object implementing the NoveltyEstimator interface. 
-        problem                      Problem           object that provides 
+        problem                      Problem           None, or object that provides 
                                                             - __call__ function taking individual_index returning (fitness, behavior_descriptors, task_solved_or_not)
                                                             - a dist_thresh (that is determined from its bds) which specifies the minimum distance that should separate a point x from
                                                               its nearest neighbour in the archive+pop in order for the point to be considered as novel. It is also used as a threshold on novelty
                                                               when updating the archive.
                                                            - optionally, a visualise_bds function.
+                                                        When problem_sampler is not None, problem should be set to None.
         mutator                      Mutator
         selector                     function
         n_pop                        int 
@@ -91,6 +92,7 @@ class NoveltySearch:
         logs_root                    str               the logs diretory will be created inside logs_root
         compute_parent_child_stats   bool
         initial_pop                  lst               if a prior on the population exists, it should be supplied here
+        problem_sampler              function          problem_sampler(num_samples=n) should return n instances of the problem 
         """
         self.archive=archive
         if archive is not None:
@@ -98,6 +100,10 @@ class NoveltySearch:
 
         self.nov_estimator=nov_estimator
         self.problem=problem
+
+        if problem_sampler is not None:
+            assert self.problem is None, "you have provided a problem sampler and a problem. Please decide which you want, and set the other to None."
+            self.problem=problem_sampler(num_samples=1)[0]
         
         self.map_type=map_type
         self._map=futures.map if map_type=="scoop" else map
@@ -111,8 +117,10 @@ class NoveltySearch:
        
         if not len(initial_pop):
             print(colored("[NS info] No initial population prior, initialising from scratch", "magenta",attrs=["bold"]))
-            initial_pop=[self.agent_factory() for i in range(n_pop)]
+            initial_pop=[self.agent_factory(i) for i in range(n_pop)]
             initial_pop=self.generate_new_agents(initial_pop, generation=0)
+        
+        self.num_agent_instances=n_pop#this is important for attributing _idx values to future agents
 
         self._initial_pop=copy.deepcopy(initial_pop)
       
@@ -140,6 +148,7 @@ class NoveltySearch:
         #print("evaluating agents... map type is set to ",self._map)
         tt1=time.time()
         xx=list(self._map(self.problem, agents))
+        #xx=list(map(self.problem, agents))
         tt2=time.time()
         elapsed=tt2-tt1
         task_solvers=[]
@@ -167,6 +176,7 @@ class NoveltySearch:
         if reinit and self.archive is not None:
             self.archive.reset()
 
+
         parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
         self.eval_agents(parents)
        
@@ -177,8 +187,8 @@ class NoveltySearch:
             parents[ag_i]._nov=novs[ag_i]
             
 
-        tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
-        for it in tqdm_gen:
+        #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
+        for it in range(iters):
 
             offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
             task_solvers, _ =self.eval_agents(offsprings)
@@ -191,7 +201,6 @@ class NoveltySearch:
                 else:
                     x._age+=1
 
-            #print("===",len(parents), len(offsprings), len(pop))
 
             self.nov_estimator.update(archive=self.archive, pop=pop)
             novs=self.nov_estimator()#computes novelty of all population
@@ -232,8 +241,8 @@ class NoveltySearch:
                 if stop_on_reaching_task:
                     break
 
-            tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
-            tqdm_gen.refresh()
+            #tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
+            #tqdm_gen.refresh()
        
         return parents, self.task_solvers#iteration:list_of_agents
 
@@ -246,13 +255,15 @@ class NoveltySearch:
 
         num_s=self.n_offspring if generation!=0 else len(parents_as_list)
         
-        mutated_ags=[self.agent_factory() for x in range(num_s)]
+        mutated_ags=[self.agent_factory(self.num_agent_instances+x) for x in range(num_s)]
         kept=random.sample(range(len(mutated_genotype)), k=num_s)
         for i in range(len(kept)):
             mutated_ags[i]._parent_idx=mutated_genotype[kept[i]][0]
             mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])
             mutated_ags[i]._created_at_gen=generation
             mutated_ags[i]._root=mutated_genotype[kept[i]][2]
+
+        self.num_agent_instances+=len(mutated_ags)
        
         return mutated_ags
     
@@ -356,15 +367,17 @@ if __name__=="__main__":
                 num_hidden=4
                 hidden_dim=10
 
-            def make_ag():
-                return Agents.SmallFC_FW(in_d=in_dims,
+            def make_ag(idx):
+                return Agents.SmallFC_FW(
+                        idx,
+                        in_d=in_dims,
                         out_d=out_dims,
                         num_hidden=num_hidden,
                         hidden_dim=hidden_dim,
                         output_normalisation=normalise_output_with)
         elif config["population"]["individual_type"]=="agent1d":
-            def make_ag():
-                return Agents.Agent1d(min(problem.env.phi_vals), max(problem.env.phi_vals))
+            def make_ag(idx):
+                return Agents.Agent1d(idx,min(problem.env.phi_vals), max(problem.env.phi_vals))
 
         
         # create mutator

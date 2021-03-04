@@ -24,7 +24,6 @@ from scoop import futures
 
 
 class Agent(ABC):
-    _num_instances=0#not threadsafe, create agents only in main thread
     @abstractmethod
     def get_flattened_weights(self):
         pass
@@ -36,12 +35,11 @@ class Agent(ABC):
     def get_genotype_len(self):
         pass
     
-    def __init__(self):
+    def __init__(self, idx):
         self._fitness=None
         self._behavior_descr=None
         self._nov=None
-        self._idx=Agent._num_instances+1
-        Agent._num_instances+=1
+        self._idx=idx
 
         self._solved_task=False
         self._created_at_gen=-1 #to compute age
@@ -58,9 +56,9 @@ class Agent(ABC):
 
 
 class Dummy(torch.nn.Module, Agent):
-    def __init__(self, in_d, out_d, out_type="list"):
+    def __init__(self, idx, in_d, out_d, out_type="list"):
         torch.nn.Module.__init__(self)
-        Agent.__init__(self)
+        Agent.__init__(self, idx)
         self.in_d=in_d
         self.out_d=out_d
 
@@ -106,7 +104,8 @@ def _identity(x):
 
 class SmallFC_FW(torch.nn.Module, Agent):
 
-    def __init__(self, 
+    def __init__(self,
+            idx,
             in_d,
             out_d,
             num_hidden=3,
@@ -115,7 +114,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
             use_bn=False,
             output_normalisation=""):
         torch.nn.Module.__init__(self)
-        Agent.__init__(self)
+        Agent.__init__(self, idx)
 
         self.mds=torch.nn.ModuleList([torch.nn.Linear(in_d, hidden_dim)])
         
@@ -204,8 +203,8 @@ class Agent1d(Agent):
     """
     for toy spiral problem
     """
-    def __init__(self, min_val, max_val):
-        super().__init__()
+    def __init__(self, idx, min_val, max_val):
+        super().__init__(idx)
         self.min_val=min_val
         self.max_val=max_val
         self.phi=0

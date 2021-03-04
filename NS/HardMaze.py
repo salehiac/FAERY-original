@@ -130,7 +130,7 @@ class HardMaze(Problem):
         self.dim_obs=len(self.env.reset())
         self.dim_act=self.env.action_space.shape[0]
         self.display= display
-    
+        
         if(display):
             self.env.enable_display()
             print(colored("Warning: you have set display to True, makes sure that you have launched scoop with -n 1", "magenta",attrs=["bold"]))
@@ -287,7 +287,6 @@ class HardMaze(Problem):
                 (int(goal.get_x()*self.maze_im.shape[0]/real_h),int(goal.get_y()*self.maze_im.shape[1]/real_w)),
                 int(self.goal_radius*self.maze_im.shape[0]/real_h), (0,0,0), thickness=1)
 
-
         if not quitely:
             plt.imshow(maze_im)
             plt.show()
@@ -341,7 +340,8 @@ if __name__=="__main__":
     if test_maze_gen:
 
         #smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml")
-        smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml",from_dataset="/tmp/mazes_6x6_test/")
+        #smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml",from_dataset="/tmp/mazes_6x6_test/")
+        smp=sample_mazes(G=6,num_samples=3,xml_template_path="../environments/env_assets/maze_template.xml",from_dataset="",tmp_dir="/tmp/")
 
-        test_envs(smp)
+        #test_envs(smp)
 
