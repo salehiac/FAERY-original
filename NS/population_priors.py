@@ -67,7 +67,16 @@ def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory):
        
     return mutated_ags
   
-  
+def _make_2d_maze_ag():
+  """
+  because scoop only likes top-level functions/objects...
+  """
+  return Agents.SmallFC_FW(in_d=5,
+      out_d=2,
+      num_hidden=3,
+      hidden_dim=10,
+      output_normalisation="")
+
 def ns_instance(in_problem,
     population,
     mutator,
@@ -142,7 +151,6 @@ class MetaQDForSparseRewards:
             test_sampler,
             num_train_samples,
             num_test_samples,
-            agent_type="feed_forward",
             top_level_log_root="//scratchbeta/salehia/tmp//"):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on test data, but on meta observations from the inner loop. So the
@@ -155,7 +163,6 @@ class MetaQDForSparseRewards:
         test_sampler         function     any object/functor/function with a __call__ that returns a list of problems from a test distribution of environments
         num_train_samples    int          number of environments to use at each outer_loop generation for training
         num_test_samples     int          number of environments to use at each outer_loop generation for testing
-        agent_type           str          either "feed_forward" or (TODO) "LSTM"
         top_level_log_root   str          where to save the population after each top_level optimisation
         """
 
@@ -167,7 +174,6 @@ class MetaQDForSparseRewards:
         self.test_sampler=test_sampler
         self.num_train_samples=num_train_samples
         self.num_test_samples=num_test_samples
-        self.agent_type=agent_type
         
         if os.path.isdir(top_level_log_root):
             dir_path=MiscUtils.create_directory_with_pid(dir_basename=top_level_log_root+"/meta-learning_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
@@ -177,29 +183,11 @@ class MetaQDForSparseRewards:
         
         self.top_level_log=dir_path
     
-        
-        dummy_sample=train_sampler(num_samples=1)[0]
-        dim_obs=dummy_sample.dim_obs
-        dim_act=dummy_sample.dim_act
-        normalise_with=dummy_sample.action_normalisation()
-
-        if agent_type=="feed_forward":
-            def make_ag():
-                return Agents.SmallFC_FW(in_d=dim_obs,
-                        out_d=dim_act,
-                        num_hidden=3,
-                        hidden_dim=10,
-                        output_normalisation=normalise_with)
-        else:
-            raise Exception("agent type unknown")
-
-        self.make_ag=make_ag
-
         self.mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=10, low=-1.0, up=1.0, indpb=0.1)
 
         ###NOTE: if at some point you add the possibility of resuming from an already given pop, don't forget to rest their _useful_evolvability etc to 0/infinity whatever
-        initial_pop=[self.make_ag() for i in range(pop_sz)]
-        initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, self.make_ag)
+        initial_pop=[_make_2d_maze_ag() for i in range(pop_sz)]
+        initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, _make_2d_maze_ag)
 
         self.pop=initial_pop
 
@@ -228,24 +216,24 @@ class MetaQDForSparseRewards:
         for outer_g in range(self.G_outer):
             pbs=self.train_sampler(num_samples=self.num_train_samples)
 
-            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, self.make_ag)
+            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, _make_2d_maze_ag)
 
             tmp_pop=self.pop + offsprings #don't change the order of this concatenation
             
 
             evolution_table=-1*np.ones([len(self.pop), len(pbs)]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
-            idx_to_row=[self.pop[i]._idx:i for i in range(len(self.pop))]
+            idx_to_row={self.pop[i]._idx:i for i in range(len(self.pop))}
 
-            metadata=futures.map(ns_instance,
+            metadata=list(futures.map(ns_instance,
                 pbs,#in_problem
                 [[x for x in tmp_pop] for i in range(len(pbs))],#population
                 [self.mutator for i in range(len(pbs))],#mutator
                 [self.inner_selector for i in range(len(pbs))],#inner_selector
-                [self.make_ag for i in range(len(pbs))],#make_ag
-                [self.G_inner for i in range(len(pbs))])#G_inner
+                [_make_2d_maze_ag for i in range(len(pbs))],#make_ag
+                [self.G_inner for i in range(len(pbs))]))#G_inner
 
-            roots_lst=metadata[0]
-            depth_lst=metadata[1]
+            roots_lst=[m[0] for m in metadata]
+            depth_lst=[m[1] for m in metadata]
   
             idx_to_individual={x._idx:x for x in tmp_pop}
 
@@ -302,19 +290,19 @@ class MetaQDForSparseRewards:
                 test_pbs=self.test_sampler(num_samples=self.num_test_samples)
                 
                 test_evolution_table=-1*np.ones([self.pop_sz, len(test_pbs)])
-                idx_to_row_test=[self.pop[i]._idx:i for i in range(len(self.pop))]
+                idx_to_row_test={self.pop[i]._idx:i for i in range(len(self.pop))}
                 
-                test_metadata=futures.map(ns_instance,
+                test_metadata=list(futures.map(ns_instance,
                     test_pbs,#in_problem
                     [[x for x in self.pop] for i in range(len(test_pbs))],#population
                     [self.mutator for i in range(len(test_pbs))],#mutator
                     [self.inner_selector for i in range(len(test_pbs))],#inner_selector
-                    [self.make_ag for i in range(len(test_pbs))],#make_ag
-                    [self.G_inner for i in range(len(test_pbs))])#G_inner
+                    [_make_2d_maze_ag for i in range(len(test_pbs))],#make_ag
+                    [self.G_inner for i in range(len(test_pbs))]))#G_inner
                 
                 for pb_t in range(len(test_pbs)):
-                  rt_t=test_metadata[0][pb_t]
-                  d_t=test_metadata[1][pb_t]
+                  rt_t=test_metadata[pb_t][0]
+                  d_t=test_metadata[pb_t][1]
                   for rt in rt_t:
                     test_evolution_table[idx_to_row_test[rt], pb_t]=d_t
 
@@ -344,7 +332,7 @@ class MetaQDForSparseRewards:
                 selector=self.inner_selector,
                 n_pop=population_size,
                 n_offspring=offsprings_size,
-                agent_factory=self.make_ag,
+                agent_factory=_make_2d_maze_ag,
                 visualise_bds_flag=1,#log to file
                 map_type="scoop",#or "std"
                 logs_root="//scratchbeta/salehia/test_dir_tmp//",
@@ -378,8 +366,8 @@ if __name__=="__main__":
         train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
         test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
 
-        num_train_samples=10
-        num_test_samples=25
+        num_train_samples=1
+        num_test_samples=1
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
@@ -404,7 +392,6 @@ if __name__=="__main__":
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
-                agent_type="feed_forward",
                 top_level_log_root="/scratchbeta/salehia/generalisation_paper/distributed/")
 
         algo()
@@ -440,7 +427,6 @@ if __name__=="__main__":
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
-                agent_type="feed_forward",
                 top_level_log_root="/scratchbeta/salehia/generalisation_paper/")
 
 
