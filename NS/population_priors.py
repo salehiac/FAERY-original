@@ -63,7 +63,9 @@ def _mutate_prior_pop(n_offspring , parents, mutator, agent_factory, total_num_a
     kept=random.sample(range(len(mutated_genotype)), k=num_s)
     for i in range(len(kept)):
         mutated_ags[i]._parent_idx=-1 #we don't care
-        mutated_ags[i]._root=mutated_genotype[kept[i]][2]
+        mutated_ags[i]._root=mutated_ags[i]._idx#it is itself the root of an evolutionnary path. ATTENTION: do NOT change that as it is important for computing the meta objectives
+                                                #Each individual needs to be its own root, otherwise the evolutionnary path from the inner loops can lead to a meta-individual that
+                                                #has been removed from the population (that actually caused a bug once)
         mutated_ags[i].set_flattened_weights(mutated_genotype[kept[i]][1][0])
         mutated_ags[i]._created_at_gen=-1#we don't care
        
@@ -234,7 +236,7 @@ class MetaQDForSparseRewards:
             #Now, problems are sampled from the constructor of each NS instance.
           
             offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, _make_2d_maze_ag, self.num_total_agents)
-            self.num_total_agents+=self.off_sz
+            self.num_total_agents+=len(offsprings)
 
             tmp_pop=self.pop + offsprings #don't change the order of this concatenation
             

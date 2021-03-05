@@ -62,7 +62,7 @@ class NoveltySearch:
             map_type="scoop",
             logs_root="/tmp/ns_log/",
             compute_parent_child_stats=False,
-            initial_pop=[],
+            initial_pop=[],#make sure they are passed by deepcopy
             problem_sampler=None):
         """
         archive                      Archive           object implementing the Archive interface. Can be None if novelty is LearnedNovelty1d/LearnedNovelty2d
@@ -91,7 +91,7 @@ class NoveltySearch:
                                                        "std"   buildin python map
         logs_root                    str               the logs diretory will be created inside logs_root
         compute_parent_child_stats   bool
-        initial_pop                  lst               if a prior on the population exists, it should be supplied here
+        initial_pop                  lst               if a prior on the population exists, it should be supplied here. ATTENTION: it should NOT be passed by ref
         problem_sampler              function          problem_sampler(num_samples=n) should return n instances of the problem 
         """
         self.archive=archive
@@ -119,6 +119,9 @@ class NoveltySearch:
             print(colored("[NS info] No initial population prior, initialising from scratch", "magenta",attrs=["bold"]))
             initial_pop=[self.agent_factory(i) for i in range(n_pop)]
             initial_pop=self.generate_new_agents(initial_pop, generation=0)
+        else:
+          for x in initial_pop:
+            x._created_at_gen=0
         
         self.num_agent_instances=n_pop#this is important for attributing _idx values to future agents
 
