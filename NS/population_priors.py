@@ -241,8 +241,8 @@ class MetaQDForSparseRewards:
             tmp_pop=self.pop + offsprings #don't change the order of this concatenation
             
 
-            evolution_table=-1*np.ones([len(self.pop), self.num_train_samples]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
-            idx_to_row={self.pop[i]._idx:i for i in range(len(self.pop))}
+            evolution_table=-1*np.ones([len(tmp_pop), self.num_train_samples]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
+            idx_to_row={tmp_pop[i]._idx:i for i in range(len(tmp_pop))}
 
             metadata=list(futures.map(ns_instance,
                 [self.train_sampler for i in range(self.num_train_samples)],
