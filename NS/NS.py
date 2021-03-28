@@ -283,7 +283,7 @@ if __name__=="__main__":
     #please don't abuse the parser. Algorithmic params should be set in the yaml files
     parser = argparse.ArgumentParser(description='Novelty Search.')
     parser.add_argument('--config', type=str,  help="yaml config file for ns", default="")
-    parser.add_argument('--resume', type=str,  help="resume exectution from a checkpoint directory", default="")
+    parser.add_argument('--resume', type=str,  help="(unused, you can use other parts of the code) resume exectution from a checkpoint directory", default="")
 
     args = parser.parse_args()
 
@@ -315,6 +315,14 @@ if __name__=="__main__":
         elif config["problem"]["name"]=="archimedean_spiral":
             import ArchimedeanSpiral
             problem=ArchimedeanSpiral.ArchimedeanSpiralProblem()
+        elif config["problem"]["name"]=="metaworld-ml1":
+            import MetaWorldProblems
+            problem=MetaWorldProblems;MetaWorldMT1(bd_type=config["problem"]["bd_type"],
+                    max_steps=-1, 
+                    display=True,
+                    assets={}, 
+                    ML1_env_name=config["problem"]["env_conf"][0]
+                    mode=config["problem"]["env_conf"][1]):
         else:
             raise NotImplementedError("Problem type")
 
@@ -349,6 +357,10 @@ if __name__=="__main__":
 
             selector=MiscUtils.NSGA2(k=config["hyperparams"]["population_size"])
         
+        elif config["selector"]["type"]=="nsga2":
+            
+            selector=MiscUtils.NSGA2(k=config["hyperparams"]["population_size"],automatic_threshold=False)
+        
         elif config["selector"]["type"]=="elitist":
 
             selector=functools.partial(MiscUtils.selBest,k=config["hyperparams"]["population_size"],automatic_threshold=False)
@@ -369,6 +381,11 @@ if __name__=="__main__":
                 normalise_output_with="tanh"
                 num_hidden=4
                 hidden_dim=10
+            elif "metaworld-ml1"==config["problem"]["name"]:
+                normalise_output_with="tanh"
+                num_hidden=2#SmallFC_FW actually adds another layer
+                hidden_dim=50
+
 
             def make_ag(idx):
                 return Agents.SmallFC_FW(
@@ -381,6 +398,7 @@ if __name__=="__main__":
         elif config["population"]["individual_type"]=="agent1d":
             def make_ag(idx):
                 return Agents.Agent1d(idx,min(problem.env.phi_vals), max(problem.env.phi_vals))
+
 
         
         # create mutator
@@ -411,6 +429,7 @@ if __name__=="__main__":
         #create NS
         map_t="scoop" if config["use_scoop"] else "std"
         visualise_bds=config["visualise_bds"]
+
         ns=NoveltySearch(archive=arch,
                 nov_estimator=nov_estimator,
                 mutator=mutator,
@@ -422,7 +441,9 @@ if __name__=="__main__":
                 visualise_bds_flag=visualise_bds,
                 map_type=map_t,
                 logs_root=config["ns_log_root"],
-                compute_parent_child_stats=config["compute_parent_child_stats"])
+                compute_parent_child_stats=config["compute_parent_child_stats"],
+                initial_pop=[],
+                problem_sampler=None)
 
         if 0:
             elapsed_time=ns.eval_agents(population)
@@ -443,20 +464,7 @@ if __name__=="__main__":
     
     elif len(args.resume):
 
-        raise Exception("not implemented yet")
+        raise Exception("not implemented yet. Technically, it isn't necessary, you can resume just by setting initial_pop in NoveltySearch.__init__")
         
-        ns=NoveltySearch(archive=arch,
-                nov_estimator=nov_estimator,
-                mutator=mutator,
-                problem=problem,
-                selector=selector,
-                n_pop=num_pop,
-                n_offspring=config["hyperparams"]["offspring_size"],
-                agent_factory=make_ag,
-                visualise_bds_flag=visualise_bds,
-                map_type=map_t,
-                logs_root="/tmp/")
-
-
 
 
