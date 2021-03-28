@@ -38,10 +38,13 @@ class Agent(ABC):
     def __init__(self, idx):
         self._fitness=None
         self._behavior_descr=None
+        self._complete_trajs=None#for debug and visualisation only
         self._nov=None
         self._idx=idx
 
         self._solved_task=False
+        self._task_info={}#it can be useful (e.g. for meta-world) to store information about the task that the agent has solved
+                          #as tasks are randomly sampled at runtime
         self._created_at_gen=-1 #to compute age
         self._parent_idx=-1#hacky way of computing bd distance between parent and child
         self._root=-1#to keep track of the root of an evolutionnary path
@@ -52,6 +55,7 @@ class Agent(ABC):
         self._useful_evolvability=0
         self._mean_adaptation_speed=float("inf")
         self._adaptation_speed_lst=[]
+
 
 
 

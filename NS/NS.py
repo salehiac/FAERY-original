@@ -115,15 +115,17 @@ class NoveltySearch:
         self.n_offspring=n_offspring
         self.agent_factory=agent_factory
        
+        self.num_agent_instances=n_pop#this is important for attributing _idx values to future agents
+        
         if not len(initial_pop):
             print(colored("[NS info] No initial population prior, initialising from scratch", "magenta",attrs=["bold"]))
             initial_pop=[self.agent_factory(i) for i in range(n_pop)]
             initial_pop=self.generate_new_agents(initial_pop, generation=0)
         else:
-          for x in initial_pop:
-            x._created_at_gen=0
+            assert len(initial_pop)==self.n_pop," this shouldn't happen"
+            for x in initial_pop:
+                x._created_at_gen=0
         
-        self.num_agent_instances=n_pop#this is important for attributing _idx values to future agents
 
         self._initial_pop=copy.deepcopy(initial_pop)
       
@@ -150,7 +152,7 @@ class NoveltySearch:
     def eval_agents(self, agents):
         #print("evaluating agents... map type is set to ",self._map)
         tt1=time.time()
-        xx=list(self._map(self.problem, agents))
+        xx=list(self._map(self.problem, agents))#attention, don't deepcopy the problem instance, see Problem.py. Use problem_sampler if necessary instead.
         #xx=list(map(self.problem, agents))
         tt2=time.time()
         elapsed=tt2-tt1
@@ -160,8 +162,13 @@ class NoveltySearch:
             ag._fitness=xx[ag_i][0]
             ag._behavior_descr=xx[ag_i][1]
             ag._solved_task=xx[ag_i][2]
+            ag._complete_trajs=xx[ag_i][3]#for debug only, disable it later
             if ag._solved_task:
                 task_solvers.append(ag)
+            
+            if hasattr(self.problem, "get_task_info"):
+                ag._task_info=self.problem.get_task_info()
+            
         return task_solvers, elapsed
 
 
@@ -183,7 +190,6 @@ class NoveltySearch:
         parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
         self.eval_agents(parents)
        
-        #### this is for leanred ones ATTENTION remove it for archive-based
         self.nov_estimator.update(archive=[], pop=parents)
         novs=self.nov_estimator()#computes novelty of all population
         for ag_i in range(len(parents)):
@@ -192,6 +198,8 @@ class NoveltySearch:
 
         #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
         for it in range(iters):
+
+            print(colored(f"archive_size=={len(self.archive)}","red"))
 
             offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
             task_solvers, _ =self.eval_agents(offsprings)
@@ -211,10 +219,11 @@ class NoveltySearch:
                 pop[ag_i]._nov=novs[ag_i]
             
             parents_next=self.selector(individuals=pop, fit_attr="_nov")
-            #p_novs=[(x._idx, x._age, x._nov) for x in parents_next]
-            #print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_novs)
+            
+            #for stdout only
+            p_report=[(x._idx, x._fitness, x._nov) for x in parents_next]
+            print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_report)
 
-            #parents_next=[copy.deepcopy(x) for x in parents_next]
 
             if self.compute_parent_child_stats:
                 for x in parents_next:
@@ -233,10 +242,10 @@ class NoveltySearch:
                     self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
-            #self.problem.visualise_bds(parents, offsprings, quitely=True, save_to=self.log_dir_path )
-            #MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
+            MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
                                                                                      ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
-                                                                                     ############## in comparisons, but this is not clean at all, so yeah, change that
+                                                                                     ############## in comparisons, but this is not clean at all, so yeah, change that  (update: what? did I ever
+                                                                                     ############## do any of that?)
             
             if len(task_solvers):
                 print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))
@@ -316,13 +325,13 @@ if __name__=="__main__":
             import ArchimedeanSpiral
             problem=ArchimedeanSpiral.ArchimedeanSpiralProblem()
         elif config["problem"]["name"]=="metaworld-ml1":
-            import MetaWorldProblems
-            problem=MetaWorldProblems;MetaWorldMT1(bd_type=config["problem"]["bd_type"],
+            import MetaworldProblems
+            problem=MetaworldProblems.MetaWorldMT1(bd_type=config["problem"]["bd_type"],
                     max_steps=-1, 
-                    display=True,
+                    display=False,#don't set it to True with scoop
                     assets={}, 
-                    ML1_env_name=config["problem"]["env_conf"][0]
-                    mode=config["problem"]["env_conf"][1]):
+                    ML1_env_name=config["problem"]["env_conf"][0],
+                    mode=config["problem"]["env_conf"][1])
         else:
             raise NotImplementedError("Problem type")
 
@@ -359,7 +368,7 @@ if __name__=="__main__":
         
         elif config["selector"]["type"]=="nsga2":
             
-            selector=MiscUtils.NSGA2(k=config["hyperparams"]["population_size"],automatic_threshold=False)
+            selector=MiscUtils.NSGA2(k=config["hyperparams"]["population_size"])
         
         elif config["selector"]["type"]=="elitist":
 
@@ -403,7 +412,7 @@ if __name__=="__main__":
         
         # create mutator
         mutator_type=config["mutator"]["type"]
-        genotype_len=make_ag().get_genotype_len()
+        genotype_len=make_ag(-1).get_genotype_len()
         if mutator_type=="gaussian_same":
             mutator_conf=config["mutator"]["gaussian_params"]
             mu, sigma, indpb = mutator_conf["mu"], mutator_conf["sigma"], mutator_conf["indpb"]
@@ -416,7 +425,7 @@ if __name__=="__main__":
             eta, low, up, indpb = mutator_conf["eta"], mutator_conf["low"], mutator_conf["up"], mutator_conf["indpb"] 
 
             if config["population"]["individual_type"]=="agent1d":
-                dummy_ag=make_ag()
+                dummy_ag=make_ag(-1)
                 low=dummy_ag.min_val
                 up=dummy_ag.max_val
 

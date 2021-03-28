@@ -21,7 +21,8 @@ class Problem(ABC):
     """
     Attention: because of the way libfastsim (which many experiments are based on) works and particularly the
     absence of proper copy constructors in it, Problem instances should NEVER be deep copied (else, their
-    env.map is copied but the C++ code ensures that the goals and illuminated switches are cleared).
+    env.map is copied but the C++ code ensures that the goals and illuminated switches are cleared). Shallow copies
+    are fine though.
 
     So yeah, a bit of gymnastics will be required in meta-learning parallelisations to avoid passing copies to scoop
     """

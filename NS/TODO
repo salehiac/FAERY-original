@@ -25,7 +25,7 @@ Note: doesn't sound like a good idea to have cavefly as an env here, as the main
                            is there a way to interpret learned BDs as "exploratory" etc?
                    - kuka
 
-Note: dist_thresh is now unused in the novelty_estimator hierarchy, it should be removed
+Note: (but not in Archive.py) dist_thresh is now unused in the novelty_estimator hierarchy, it should be removed 
 
 NOTE: the decoder produces rectangular artifacts due to deconvolution, I haven't found any good solution to that so I've left it as it is, since it's good enough for our experiments
 

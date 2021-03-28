@@ -17,6 +17,7 @@
 
 import copy
 import time
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
@@ -51,7 +52,7 @@ class MetaWorldMT1(Problem):
 
     So, the 4d action space just corresponds to positions and gripper action.
     """
-    def __init__(self, bd_type="type_1", max_steps=-1, display=False, assets={}, ML1_env_name="pick-place-v2", mode="train"):
+    def __init__(self, bd_type="type_1", max_steps=-1, display=False, assets={}, ML1_env_name="pick-place-v2", mode="train", task_id=-1):
         """
         bd_type        The idea is that it fosters exploration related to the task, for now it doesn't matter if it isn't 
                        optimal. Currently those types are available: (noting N the number of samples)
@@ -71,17 +72,28 @@ class MetaWorldMT1(Problem):
         assets         ignored, here for api compatibility issues.
         ML1_env_name   str, should be one of the strings in metaworld.ML1.ENV_NAMES
         mode           "train" or "test"
+        task_id        int. If -1, randomly samples tasks (goal positions), which is what you usually want for normal training/testing.
+                            If task_id!=-1, forces the use of the task with the given task_id. That can be useful for visualisation and debug.
         """
         super().__init__()
 
         self.ML1_env_name=ML1_env_name
         self.ml1 = metaworld.ML1(self.ML1_env_name) #constructs the benchmark which is an environment. As this is ML1, only the task (i.e. the goal)
                                           #will vary. So ml1.train_classes is going to be of lenght 1
-                                          
-        self.env = self.ml1.train_classes[self.ML1_env_name]()  
-        self.task = random.choice(self.ml1.train_tasks)#changes goal
-        self.env.set_task(self.task)  # Set task
- 
+        
+        self.mode=mode
+
+        
+        if self.mode=="train":
+            self.env = self.ml1.train_classes[self.ML1_env_name]()  
+            self.task_id = np.random.randint(len(self.ml1.train_tasks)) if task_id==-1 else task_id
+            self.task=self.ml1.train_tasks[self.task_id]#changes goal
+            self.env.set_task(self.task)  # Set task
+        if self.mode=="test":
+            self.env = self.ml1.test_classes[self.ML1_env_name]()  
+            self.task_id = np.random.randint(len(self.ml1.test_tasks)) if task_id==-1 else task_id
+            self.task=self.ml1.test_tasks[self.task_id]#changes goal
+            self.env.set_task(self.task)  # Set task
 
         self.dim_obs=self.env.observation_space.shape[0]#in the latest versions of metaworld, it is 39
         self.dim_act=self.env.action_space.shape[0]#should be 4 (end-effector position + grasping activation. there is no orientation)
@@ -98,8 +110,18 @@ class MetaWorldMT1(Problem):
             self.bd_extractor=BehaviorDescr.GenericBD(dims=5,num=6)#dims*num dimensional
         else:
             raise Exception("Unkown bd type")
-        self.dist_thresh=1 #see comment in HardMaze.py
+        self.dist_thresh=0.001 #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
         self.num_saved=0
+
+    def get_task_info(self):
+        """
+        useful for keeping track of which agent sovles what in metaworld
+        """
+        dct={}
+        dct["mode"]=self.mode
+        dct["task_id"]=self.task_id
+
+        return dct
 
     def get_end_effector_pose(self):
 
@@ -172,37 +194,119 @@ class MetaWorldMT1(Problem):
                 break
                
         bd=self.bd_extractor.extract_behavior(np.array(behavior_hist).reshape(len(behavior_hist), len(behavior_hist[0]))) 
+        complete_traj=np.concatenate([x.reshape(1,-1) for x in behavior_hist],0)
 
-        return fitness, bd, task_solved
+        return fitness, bd, task_solved, complete_traj
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """
         """
-        pass
+        if not quitely and self.display:
+            raise Exception("there are some issues with mujoco windows. If self.display, set quitely to True. Otherwise, set self.display to False")
+
+        fig = plt.figure()
+        ax = plt.axes(projection='3d',adjustable="box")
+        color_population="red"
+        color_archive="blue"
+        #color_closed_gripper="green"
+        #color_open_gripper="yellow"
+        for x in population:
+            bd=x._behavior_descr
+            bh=x._complete_trajs
+            ax.plot3D(bh[:,0], bh[:,1], bh[:,2], "k--")
+            ax.scatter3D(bd[:,0], bd[:,1], bd[:,2], c=color_population)
+            #ax.set_aspect('equal') #doesn't support the aspect argument....
+            
+            #ax.scatter3D(bd[:,0], bd[:,1], bd[:,2], todo)
+            
+        for x in archive:
+            bd_a=x._behavior_descr
+            bh_a=x._complete_trajs
+            ax.plot3D(bh_a[:,0], bh_a[:,1], bh_a[:,2], "m--")
+            ax.scatter3D(bd_a[:,0], bd_a[:,1], bd_a[:,2], c=color_archive)
+            #ax.set_aspect('equal') #doesn't support the aspect argument....
+
+        if not quitely:
+            plt.show()
+        else:
+            plt.savefig(save_to+f"/gen_{self.num_saved}.png")
+            self.num_saved+=1
+            plt.close()
+
+
 
 
 if __name__=="__main__":
 
-    mtw_mt1=MetaWorldMT1(bd_type="type_1", 
-            max_steps=-1, 
-            display=True, 
-            assets={}, 
-            ML1_env_name="pick-place-v2",
-            mode="train")
-    
-    import Agents
+    TEST_RANDOM_AGENT=False
+    TEST_BEST_AG_FROM_SAVED_POPULATION=True
 
-    dummy_ag=Agents.SmallFC_FW(idx=-1,
-            in_d=39,
-            out_d=4,
-            num_hidden=2,
-            hidden_dim=70,
-            non_lin="tanh",
-            use_bn=False,
-            output_normalisation=mtw_mt1.action_normalisation())
 
-    num_experiments=1
-    for ii in range(num_experiments):
-        fit, beh_desr, is_solved=mtw_mt1(dummy_ag)
-        print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
+    if TEST_RANDOM_AGENT:
+
+        mtw_mt1=MetaWorldMT1(bd_type="type_1", 
+                max_steps=-1, 
+                display=True, 
+                assets={}, 
+                ML1_env_name="pick-place-v2",
+                mode="train")
+        
+        import Agents
+
+        dummy_ag=Agents.SmallFC_FW(idx=-1,
+                in_d=39,
+                out_d=4,
+                num_hidden=2,
+                hidden_dim=70,
+                non_lin="tanh",
+                use_bn=False,
+                output_normalisation=mtw_mt1.action_normalisation())
+
+        num_experiments=1
+        for ii in range(num_experiments):
+            fit, beh_desr, is_solved=mtw_mt1(dummy_ag)
+            print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
+
+    if TEST_BEST_AG_FROM_SAVED_POPULATION:
+
+        pop_path="/tmp/NS_log_zoA0Tyn7BT_69555/population_gen_40"
+
+        
+        import Agents
+        import pickle
+
+        with open(pop_path,"rb") as fl:
+            population=pickle.load(fl)
+
+        train_or_test=population[0]._task_info["mode"]
+        tsk_id=population[0]._task_info["task_id"]
+
+        print(colored(f"mode={train_or_test}, task_id={tsk_id}","magenta"))
+            
+        mtw_mt1=MetaWorldMT1(bd_type="type_1", 
+                max_steps=-1, 
+                display=True, 
+                assets={}, 
+                ML1_env_name="pick-place-v2",
+                mode=train_or_test,
+                task_id=tsk_id)
+
+        fits=[x._fitness for x in population]
+        best_ag_id=np.argmax(fits)
+        worst_ag_id=np.argmin(fits)
+        print(f"best_ag_id=={best_ag_id}")
+        print(f"worst_ag_id=={worst_ag_id}")
+        print(fits)
+
+        num_experiments=1
+        for ii in range(num_experiments):
+            print(colored("best agent","green"))
+            print("fitness in archive==",fits[best_ag_id])
+            fit, beh_desr, is_solved, _ =mtw_mt1(population[best_ag_id])
+            print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
+            print(colored("worst agent","red"))
+            print("fitness in archive==",fits[worst_ag_id])
+            fit, beh_desr, is_solved, _ =mtw_mt1(population[worst_ag_id])
+            print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
+
 

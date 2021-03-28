@@ -141,7 +141,7 @@ class LargeAntMaze(Problem):
         bd=self.bd_extractor.extract_behavior(behavior_info).flatten().reshape(1,-1)
         #pdb.set_trace()
 
-        return fitness, bd, solved
+        return fitness, bd, solved, None
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """

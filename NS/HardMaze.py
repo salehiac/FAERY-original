@@ -235,7 +235,7 @@ class HardMaze(Problem):
             if task_solved:
                 cv2.imwrite("//scratchbeta/salehia/tmp//solution.png", behavior_info)
         #pdb.set_trace()
-        return fitness, bd, task_solved
+        return fitness, bd, task_solved, None
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """

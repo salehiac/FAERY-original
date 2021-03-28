@@ -20,8 +20,8 @@ obs_spcaes=[]
 for bn_name in metaworld.ML1.ENV_NAMES:
 
     print(bn_name)
-    #bn_name="basketball-v2"
-    bn_name="pick-place-v2"
+    bn_name="basketball-v2"
+    #bn_name="pick-place-v2"
 
     ml1 = metaworld.ML1(bn_name) #constructs the benchmark which is an environment. As this is ML1, only the task (i.e. the goal)
                                  #will vary. So ml1.train_classes is going to be of lenght 1
@@ -30,6 +30,9 @@ for bn_name in metaworld.ML1.ENV_NAMES:
     
     env = ml1.train_classes[bn_name]()  
     task = random.choice(ml1.train_tasks)#changes goal
+
+    break
+
     env.set_task(task)  # Set task
     
     obs = env.reset()  # Reset environment
@@ -39,7 +42,7 @@ for bn_name in metaworld.ML1.ENV_NAMES:
 
     if 1:
         for step in range(env.max_path_length):
-        #for step in range(200):
+        #for step in range(10):
             #print("curr_path_length==",env.curr_path_length)
             env.render()
             a = env.action_space.sample()  # Sample an action
