@@ -46,6 +46,7 @@ else:
 
 
 
+
 class MetaWorldMT1(Problem):
     """
     Problem based on meta-world MT1. A sample environment will be paired with a random task,
@@ -95,7 +96,8 @@ class MetaWorldMT1(Problem):
         
         self.mode=mode
 
-        
+       
+        #print("TASK_ID==",task_id)
         if self.mode=="train":
             self.env = self.ml1.train_classes[self.ML1_env_name]()  
             self.task_id = np.random.randint(len(self.ml1.train_tasks)) if task_id==-1 else task_id
@@ -133,6 +135,7 @@ class MetaWorldMT1(Problem):
         dct={}
         dct["mode"]=self.mode
         dct["task_id"]=self.task_id
+        dct["global_seed"]=common_config.config_.seed if common_config.config_ is not None else None
 
         return dct
 
@@ -282,16 +285,25 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        pop_path="/tmp//NS_log_feWA3Gth8o_74897/population_gen_10"
+        #pop_path="/tmp/NS_log_feWA3Gth8o_89980/population_gen_250"
+        pop_path="/tmp//NS_log_feWA3Gth8o_94809/population_gen_10"
+
         
         import Agents
         import pickle
+        import torch
 
         with open(pop_path,"rb") as fl:
             population=pickle.load(fl)
 
         train_or_test=population[0]._task_info["mode"]
         tsk_id=population[0]._task_info["task_id"]
+        tsk_global_seed=population[0]._task_info["global_seed"]
+        print("tsk_global_seed==",tsk_global_seed)
+        
+        np.random.seed(tsk_global_seed)
+        random.seed(tsk_global_seed)
+        torch.manual_seed(tsk_global_seed)
 
         print(colored(f"mode={train_or_test}, task_id={tsk_id}","magenta"))
             

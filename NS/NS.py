@@ -204,6 +204,7 @@ class NoveltySearch:
         #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
         for it in range(iters):
 
+            print(colored(f"iter=={it}","red"))
             print(colored(f"archive_size=={len(self.archive)}","red"))
 
             offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
@@ -226,7 +227,7 @@ class NoveltySearch:
             parents_next=self.selector(individuals=pop, fit_attr="_nov")
             
             #for stdout only
-            p_report=[(x._idx, x._fitness, x._nov) for x in parents_next]
+            p_report=[(x._idx, x._fitness, x._nov, x._task_info) for x in parents_next]
             print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_report)
 
 
