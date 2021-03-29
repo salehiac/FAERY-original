@@ -27,13 +27,9 @@ import pickle
 import random
 
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import tqdm
 import cv2
-import deap.creator
-import deap.base
-import deap.tools
 from functools import reduce
 import string
 
@@ -47,6 +43,12 @@ with open("../common_config/seed_file","r") as fl:
     np.random.seed(seed_)
     random.seed(seed_)
     torch.manual_seed(seed_)
+
+import matplotlib.pyplot as plt
+import deap.creator
+import deap.base
+import deap.tools
+
 
 sys.path.append("../")
 from Data import LinnaeusLoader

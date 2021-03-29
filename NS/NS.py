@@ -24,10 +24,8 @@ import functools
 import random
 import pdb
 import numpy as np
-import matplotlib.pyplot as plt
 
 import torch
-from deap import tools as deap_tools
 from scoop import futures
 import yaml
 import argparse
@@ -42,6 +40,9 @@ with open("../common_config/seed_file","r") as fl:
     np.random.seed(seed_)
     random.seed(seed_)
     torch.manual_seed(seed_)
+
+import matplotlib.pyplot as plt
+from deap import tools as deap_tools
 
 import Archives
 import NoveltyEstimators

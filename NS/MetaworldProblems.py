@@ -17,17 +17,13 @@
 
 import copy
 import time
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import matplotlib.pyplot as plt
 import pdb
 import sys
 import os
 import random
 
-import gym
 import torch
-import metaworld
 from scoop import futures
 from termcolor import colored
 
@@ -41,6 +37,10 @@ with open("../common_config/seed_file","r") as fl:
     random.seed(seed_)
     torch.manual_seed(seed_)
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import gym
+import metaworld
 import BehaviorDescr
 import MiscUtils
 from Problem import Problem
@@ -288,7 +288,7 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        pop_path="/tmp/NS_log_feWA3Gth8o_104413/population_gen_21"
+        pop_path="/tmp/NS_log_feWA3Gth8o_106120/population_gen_89"
 
 
         

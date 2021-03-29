@@ -8,10 +8,7 @@ import random
 #import pdb
 
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
-import deap
-from deap import tools as deap_tools
 from scoop import futures
 import yaml
 import argparse
@@ -28,6 +25,10 @@ with open("../common_config/seed_file","r") as fl:
     random.seed(seed_)
     torch.manual_seed(seed_)
 
+
+import deap
+from deap import tools as deap_tools
+import matplotlib.pyplot as plt
 
 import Archives
 import NS

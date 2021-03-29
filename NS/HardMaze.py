@@ -18,14 +18,11 @@
 import copy
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
 import pdb
 import sys
 import os
 
-import gym
-import gym_fastsim
 from functools import reduce
 import string
 import random
@@ -43,6 +40,11 @@ with open("../common_config/seed_file","r") as fl:
     np.random.seed(seed_)
     random.seed(seed_)
     torch.manual_seed(seed_)
+
+import gym
+import gym_fastsim
+import matplotlib.pyplot as plt
+
 
 import BehaviorDescr
 import MiscUtils

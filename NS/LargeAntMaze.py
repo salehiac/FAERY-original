@@ -18,14 +18,10 @@
 import copy
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
 import sys
 import pdb
 import torch
-
-import gym
-import gym_fastsim
 
 from scoop import futures
 from termcolor import colored
@@ -38,6 +34,11 @@ with open("../common_config/seed_file","r") as fl:
     seed_=int(lns[0].strip())
     np.random.seed(seed_)
     torch.manual_seed(seed_)
+
+import gym
+import gym_fastsim
+import matplotlib.pyplot as plt
+
 
 import BehaviorDescr
 import MiscUtils

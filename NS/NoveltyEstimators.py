@@ -20,7 +20,6 @@ from abc import ABC, abstractmethod
 from sklearn.neighbors import KDTree
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
 import pdb
 import random
 #import time
@@ -40,6 +39,7 @@ with open("../common_config/seed_file","r") as fl:
     torch.manual_seed(seed_)
 
 
+import matplotlib.pyplot as plt
 import MiscUtils
 
 class NoveltyEstimator(ABC):
