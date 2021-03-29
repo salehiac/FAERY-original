@@ -26,24 +26,24 @@ import os
 import random
 
 import gym
+import torch
 import metaworld
 from scoop import futures
 from termcolor import colored
 
+"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
+hasn't been merged)"""
+with open("../common_config/seed_file","r") as fl:
+    lns=fl.readlines()
+    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
+    seed_=int(lns[0].strip())
+    np.random.seed(seed_)
+    random.seed(seed_)
+    torch.manual_seed(seed_)
+
 import BehaviorDescr
 import MiscUtils
 from Problem import Problem
-
-import common_config
-if common_config.config_ is not None:
-    np.random.seed(common_config.config_.seed)
-    random.seed(common_config.config_.seed)
-else:
-    seed_msg=f"[WARNING] {__file__}: no manual seed. If using meta-world, that could be problematic for behavior repeatability as tasks sampled by metaworld change depending on the seed.\n"
-    seed_msg+="If needed, you can use Agent._task_info to retrieve the task and the seeds an agent has succeeded in." 
-    print(colored(seed_msg, "green",attrs=["bold"],on_color="on_grey"))
-
-
 
 
 
@@ -109,6 +109,8 @@ class MetaWorldMT1(Problem):
             self.task=self.ml1.test_tasks[self.task_id]#changes goal
             self.env.set_task(self.task)  # Set task
 
+        self.env.seed(seed_)
+
 
         self.dim_obs=self.env.observation_space.shape[0]#in the latest versions of metaworld, it is 39
         self.dim_act=self.env.action_space.shape[0]#should be 4 (end-effector position + grasping activation. there is no orientation)
@@ -135,7 +137,8 @@ class MetaWorldMT1(Problem):
         dct={}
         dct["mode"]=self.mode
         dct["task_id"]=self.task_id
-        dct["global_seed"]=common_config.config_.seed if common_config.config_ is not None else None
+        dct["global_seed"]=seed_ 
+        dct["problem constant"]=(self.env.goal, self.env.obj_init_pos,self.env.obj_init_angle)
 
         return dct
 
@@ -184,7 +187,7 @@ class MetaWorldMT1(Problem):
         for i in range(self.max_steps):
             if self.display:
                 self.env.render()
-                time.sleep(0.01)
+                #time.sleep(0.01)
 
             action=ag(obs)
             action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
@@ -285,28 +288,31 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        #pop_path="/tmp/NS_log_feWA3Gth8o_89980/population_gen_250"
-        pop_path="/tmp//NS_log_feWA3Gth8o_94809/population_gen_10"
+        pop_path="/tmp/NS_log_feWA3Gth8o_104413/population_gen_21"
+
 
         
         import Agents
         import pickle
-        import torch
 
         with open(pop_path,"rb") as fl:
             population=pickle.load(fl)
-
-        train_or_test=population[0]._task_info["mode"]
-        tsk_id=population[0]._task_info["task_id"]
-        tsk_global_seed=population[0]._task_info["global_seed"]
-        print("tsk_global_seed==",tsk_global_seed)
-        
-        np.random.seed(tsk_global_seed)
-        random.seed(tsk_global_seed)
-        torch.manual_seed(tsk_global_seed)
-
-        print(colored(f"mode={train_or_test}, task_id={tsk_id}","magenta"))
             
+        fits=[x._fitness for x in population]
+        best_ag_id=np.argmax(fits)
+        worst_ag_id=np.argmin(fits)
+        print("best_agent saved param sum==",population[best_ag_id]._sum_of_model_params)
+        print(f"best_ag_id=={best_ag_id},  best ag param sum==",MiscUtils.get_sum_of_model_params(population[best_ag_id]))
+        print("worst agent saved param sum==",population[worst_ag_id]._sum_of_model_params)
+        print(f"worst_ag_id=={worst_ag_id}, worst ag param sum==",MiscUtils.get_sum_of_model_params(population[worst_ag_id]))
+        print(fits)
+
+
+        train_or_test=population[best_ag_id]._task_info["mode"]
+        tsk_id=population[best_ag_id]._task_info["task_id"]
+
+        print(colored(f"task_info (saved): {population[0]._task_info}","red"))
+        
         mtw_mt1=MetaWorldMT1(bd_type="type_1", 
                 max_steps=-1, 
                 display=True, 
@@ -314,13 +320,9 @@ if __name__=="__main__":
                 ML1_env_name="pick-place-v2",
                 mode=train_or_test,
                 task_id=tsk_id)
+        print(colored(f"task_info (created env): {mtw_mt1.get_task_info()}","red"))
 
-        fits=[x._fitness for x in population]
-        best_ag_id=np.argmax(fits)
-        worst_ag_id=np.argmin(fits)
-        print(f"best_ag_id=={best_ag_id}")
-        print(f"worst_ag_id=={worst_ag_id}")
-        print(fits)
+
 
         num_experiments=1
         for ii in range(num_experiments):

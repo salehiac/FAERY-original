@@ -33,13 +33,15 @@ import yaml
 import argparse
 from termcolor import colored
 
-#set the seed before local imports
-import common_config
-seed_=127#this can't be done in the yaml file as all scoop processes will parse this file and will need to set the seed
-common_config.config_=common_config.Config(seed_)
-np.random.seed(common_config.config_.seed)
-random.seed(common_config.config_.seed)
-torch.manual_seed(common_config.config_.seed)
+"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
+hasn't been merged"""
+with open("../common_config/seed_file","r") as fl:
+    lns=fl.readlines()
+    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
+    seed_=int(lns[0].strip())
+    np.random.seed(seed_)
+    random.seed(seed_)
+    torch.manual_seed(seed_)
 
 import Archives
 import NoveltyEstimators
@@ -248,6 +250,8 @@ class NoveltySearch:
                     self.archive.dump(self.log_dir_path+f"/archive_{it}")
             
             self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+            for ag in parents:
+                ag._sum_of_model_params=MiscUtils.get_sum_of_model_params(ag)
             MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
                                                                                      ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
                                                                                      ############## in comparisons, but this is not clean at all, so yeah, change that  (update: what? did I ever

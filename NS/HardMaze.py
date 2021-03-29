@@ -32,25 +32,24 @@ import random
 
 from scoop import futures
 from termcolor import colored
+
+
+"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
+hasn't been merged)"""
+with open("../common_config/seed_file","r") as fl:
+    lns=fl.readlines()
+    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
+    seed_=int(lns[0].strip())
+    np.random.seed(seed_)
+    random.seed(seed_)
+    torch.manual_seed(seed_)
+
 import BehaviorDescr
 import MiscUtils
 from Problem import Problem
 sys.path.append("..")
 import environments.maze_generator.maze_generator as maze_generator
 
-
-from threading import Thread, Lock
-
-_mutex = Lock()
-
-import common_config
-if common_config.config_ is not None:
-    np.random.seed(common_config.config_.seed)
-    random.seed(common_config.config_.seed)
-else:
-    seed_msg=f"[WARNING] {__file__}: no manual seed. If using meta-world, that could be problematic for behavior repeatability as tasks sampled by metaworld change depending on the seed.\n"
-    seed_msg+="If needed, you can use Agent._task_info to retrieve the task and the seeds an agent has succeeded in." 
-    print(colored(seed_msg, "green",attrs=["bold"],on_color="on_grey"))
 
 def sample_mazes(G, num_samples, xml_template_path, tmp_dir="//scratchbeta/salehia/tmp//", from_dataset="", random_goals=False):
     """
@@ -223,12 +222,6 @@ class HardMaze(Problem):
             task_solved=True
             ended=True
            
-            #_mutex.acquire()
-            #if dist_to_goal< self.best_dist_to_goal:
-            #    self.best_dist_to_goal=dist_to_goal
-            #    print("************",dist_to_goal)
-            #_mutex.release()
-
 
         #cv2.imwrite(f"/tmp/meta_observation_samples/obs_{ag._idx}.png", behavior_info)
         #self._debug_counter+=1

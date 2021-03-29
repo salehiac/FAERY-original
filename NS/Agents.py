@@ -23,16 +23,15 @@ import numpy as np
 import random
 from scoop import futures
 
-from termcolor import colored
-import common_config
-if common_config.config_ is not None:
-    np.random.seed(common_config.config_.seed)
-    random.seed(common_config.config_.seed)
-    torch.manual_seed(common_config.config_.seed)
-else:
-    seed_msg=f"[WARNING] {__file__}: no manual seed. If using meta-world, that could be problematic for behavior repeatability as tasks sampled by metaworld change depending on the seed.\n"
-    seed_msg+="If needed, you can use Agent._task_info to retrieve the task and the seeds an agent has succeeded in." 
-    print(colored(seed_msg, "green",attrs=["bold"],on_color="on_grey"))
+"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
+hasn't been merged)"""
+with open("../common_config/seed_file","r") as fl:
+    lns=fl.readlines()
+    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
+    seed_=int(lns[0].strip())
+    np.random.seed(seed_)
+    random.seed(seed_)
+    torch.manual_seed(seed_)
 
 class Agent(ABC):
     @abstractmethod
@@ -66,6 +65,8 @@ class Agent(ABC):
         self._useful_evolvability=0
         self._mean_adaptation_speed=float("inf")
         self._adaptation_speed_lst=[]
+
+        self._sum_of_model_params=None #for debug
 
 
 
