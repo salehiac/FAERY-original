@@ -34,6 +34,18 @@ import BehaviorDescr
 import MiscUtils
 from Problem import Problem
 
+import common_config
+if common_config.config_ is not None:
+    np.random.seed(common_config.config_.seed)
+    random.seed(common_config.config_.seed)
+else:
+    seed_msg=f"[WARNING] {__file__}: no manual seed. If using meta-world, that could be problematic for behavior repeatability as tasks sampled by metaworld change depending on the seed.\n"
+    seed_msg+="If needed, you can use Agent._task_info to retrieve the task and the seeds an agent has succeeded in." 
+    print(colored(seed_msg, "green",attrs=["bold"],on_color="on_grey"))
+
+
+
+
 class MetaWorldMT1(Problem):
     """
     Problem based on meta-world MT1. A sample environment will be paired with a random task,
@@ -94,6 +106,7 @@ class MetaWorldMT1(Problem):
             self.task_id = np.random.randint(len(self.ml1.test_tasks)) if task_id==-1 else task_id
             self.task=self.ml1.test_tasks[self.task_id]#changes goal
             self.env.set_task(self.task)  # Set task
+
 
         self.dim_obs=self.env.observation_space.shape[0]#in the latest versions of metaworld, it is 39
         self.dim_act=self.env.action_space.shape[0]#should be 4 (end-effector position + grasping activation. there is no orientation)
@@ -269,8 +282,7 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        pop_path="/tmp/NS_log_zoA0Tyn7BT_69555/population_gen_40"
-
+        pop_path="/tmp//NS_log_feWA3Gth8o_74897/population_gen_10"
         
         import Agents
         import pickle

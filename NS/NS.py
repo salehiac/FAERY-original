@@ -19,22 +19,27 @@
 import time
 import sys
 import os
-from abc import ABC, abstractmethod
 import copy
 import functools
 import random
 import pdb
-
 import numpy as np
 import matplotlib.pyplot as plt
+
 import torch
-import deap
 from deap import tools as deap_tools
 from scoop import futures
 import yaml
 import argparse
 from termcolor import colored
-#import cv2
+
+#set the seed before local imports
+import common_config
+seed_=127#this can't be done in the yaml file as all scoop processes will parse this file and will need to set the seed
+common_config.config_=common_config.Config(seed_)
+np.random.seed(common_config.config_.seed)
+random.seed(common_config.config_.seed)
+torch.manual_seed(common_config.config_.seed)
 
 import Archives
 import NoveltyEstimators
@@ -289,6 +294,7 @@ class NoveltySearch:
 
 if __name__=="__main__":
 
+
     #please don't abuse the parser. Algorithmic params should be set in the yaml files
     parser = argparse.ArgumentParser(description='Novelty Search.')
     parser.add_argument('--config', type=str,  help="yaml config file for ns", default="")
@@ -306,7 +312,7 @@ if __name__=="__main__":
         ### create ns component from yaml file
         with open(args.config,"r") as fl:
             config=yaml.load(fl,Loader=yaml.FullLoader)
-
+           
         # create behavior descriptors and problem
         if config["problem"]["name"]=="hardmaze":
             max_steps=config["problem"]["max_steps"]

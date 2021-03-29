@@ -34,6 +34,8 @@ from Problem import Problem
 
 sys.path.append("..")
 from environments.archimedean_spiral.archimedean_spiral import ArchimedeanSpiral
+
+
 class ArchimedeanSpiralProblem(Problem):
     def __init__(self, pb_type="", bd_type="", max_steps=20000, display=False, assets={}):
         """

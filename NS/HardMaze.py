@@ -43,8 +43,14 @@ from threading import Thread, Lock
 
 _mutex = Lock()
 
-
-
+import common_config
+if common_config.config_ is not None:
+    np.random.seed(common_config.config_.seed)
+    random.seed(common_config.config_.seed)
+else:
+    seed_msg=f"[WARNING] {__file__}: no manual seed. If using meta-world, that could be problematic for behavior repeatability as tasks sampled by metaworld change depending on the seed.\n"
+    seed_msg+="If needed, you can use Agent._task_info to retrieve the task and the seeds an agent has succeeded in." 
+    print(colored(seed_msg, "green",attrs=["bold"],on_color="on_grey"))
 
 def sample_mazes(G, num_samples, xml_template_path, tmp_dir="//scratchbeta/salehia/tmp//", from_dataset="", random_goals=False):
     """
