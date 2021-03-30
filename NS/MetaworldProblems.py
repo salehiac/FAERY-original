@@ -110,6 +110,7 @@ class MetaWorldMT1(Problem):
             self.env.set_task(self.task)  # Set task
 
         self.env.seed(seed_)
+        #self.env.random_init=False
 
 
         self.dim_obs=self.env.observation_space.shape[0]#in the latest versions of metaworld, it is 39
@@ -127,7 +128,7 @@ class MetaWorldMT1(Problem):
             self.bd_extractor=BehaviorDescr.GenericBD(dims=5,num=6)#dims*num dimensional
         else:
             raise Exception("Unkown bd type")
-        self.dist_thresh=0.001 #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
+        self.dist_thresh=0 #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
         self.num_saved=0
 
     def get_task_info(self):
@@ -141,6 +142,10 @@ class MetaWorldMT1(Problem):
         dct["problem constant"]=(self.env.goal, self.env.obj_init_pos,self.env.obj_init_angle)
 
         return dct
+
+    def set_env_state(self,state):
+
+        self.env.set_env_state(state)
 
     def get_end_effector_pose(self):
 
@@ -174,48 +179,68 @@ class MetaWorldMT1(Problem):
         raise NotImplementedError("not implemented. You can easily get that info from self.env.observation_space.high and .low though.")
         return 
 
-    def __call__(self, ag):
+    def __call__(self, ag, forced_init_state=None, forced_init_obs=None):
+        """
+        if forced_init_state is not None, self.env.reset() wont be called and the evaluation will start from forced_init_state.
+        """
 
         if hasattr(ag, "eval"):#in case of torch agent
             ag.eval() 
 
-        obs=self.env.reset()
+        with torch.no_grad():#replace with generic context_magager
 
-        fitness=0
-        behavior_hist=[]
-        task_solved=False
-        for i in range(self.max_steps):
-            if self.display:
-                self.env.render()
-                #time.sleep(0.01)
+            if forced_init_state is None:
+                obs=self.env.reset()
+            else:
+                self.set_env_state(forced_init_state)
+                obs=self.env._get_obs()
+   
+            if forced_init_obs is not None:
+                obs=forced_init_obs.copy()
 
-            action=ag(obs)
-            action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
-                
-            obs, reward, done, info = self.env.step(action)
+            init_state=self.env.get_env_state()
+            init_obs=obs.copy()
+            #pdb.set_trace()
+            first_action=None
 
-            if self.bd_type=="type_0":
-                behavior_hist.append(obs[:3])
-            elif self.bd_type=="type_1":
-                behavior_hist.append(obs[:4])#obs[3] is 10*get_gripper_openness(), let's go with that for now
-            elif self.bd_type=="type_2":
-                closing_command=float(action[3]>0)
-                beh=np.zeros(5)
-                beh[:4]=obs[:4].copy()
-                beh[4]=closing_command
-                behavior_hist.append(beh)
+            fitness=0
+            behavior_hist=[]
+            task_solved=False
+            for i in range(self.max_steps):
+                if self.display:
+                    self.env.render()
+                    time.sleep(0.05)
 
-            fitness+=reward
-            if info["success"]:
-                task_solved=True
-                done=True
-            if done:
-                break
-               
-        bd=self.bd_extractor.extract_behavior(np.array(behavior_hist).reshape(len(behavior_hist), len(behavior_hist[0]))) 
-        complete_traj=np.concatenate([x.reshape(1,-1) for x in behavior_hist],0)
+                action=ag(obs)
+                if first_action is None:
+                    first_action=action
+                action=action.flatten().tolist() if isinstance(action, np.ndarray) else action
+                    
+                obs, reward, done, info = self.env.step(action)
 
-        return fitness, bd, task_solved, complete_traj
+                if self.bd_type=="type_0":
+                    behavior_hist.append(obs[:3])
+                elif self.bd_type=="type_1":
+                    behavior_hist.append(obs[:4])#obs[3] is 10*get_gripper_openness(), let's go with that for now
+                elif self.bd_type=="type_2":
+                    closing_command=float(action[3]>0)
+                    beh=np.zeros(5)
+                    beh[:4]=obs[:4].copy()
+                    beh[4]=closing_command
+                    behavior_hist.append(beh)
+
+                fitness+=reward
+                if info["success"]:
+                    task_solved=True
+                    done=True
+                if done:
+                    break
+                   
+            bd=self.bd_extractor.extract_behavior(np.array(behavior_hist).reshape(len(behavior_hist), len(behavior_hist[0]))) 
+            complete_traj=np.concatenate([x.reshape(1,-1) for x in behavior_hist],0)
+
+        return fitness, bd, task_solved, complete_traj, init_state, init_obs, first_action
+    
 
     def visualise_bds(self,archive, population, quitely=True, save_to=""):
         """
@@ -288,7 +313,12 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        pop_path="/tmp/NS_log_feWA3Gth8o_106120/population_gen_89"
+        #pop_path="/tmp/NS_log_feWA3Gth8o_106120/population_gen_89"
+        #pop_path="//tmp//NS_log_feWA3Gth8o_37942/population_gen_26"
+        #pop_path="//tmp//NS_log_feWA3Gth8o_39498/population_gen_40"
+        #pop_path="/tmp//NS_log_feWA3Gth8o_44434/population_gen_40"
+        pop_path="/tmp//NS_log_TC8FE2XvSR_115088/population_gen_79"
+
 
 
         
@@ -299,12 +329,13 @@ if __name__=="__main__":
             population=pickle.load(fl)
             
         fits=[x._fitness for x in population]
-        best_ag_id=np.argmax(fits)
-        worst_ag_id=np.argmin(fits)
+        #novs=[x._nov for x in population]
+        #best_ag_id=np.argmax(fits)
+        solvers=[i for i in range(len(population)) if population[i]._solved_task]
+        print("SOLVERS==",solvers)
+        best_ag_id=solvers[0]
         print("best_agent saved param sum==",population[best_ag_id]._sum_of_model_params)
         print(f"best_ag_id=={best_ag_id},  best ag param sum==",MiscUtils.get_sum_of_model_params(population[best_ag_id]))
-        print("worst agent saved param sum==",population[worst_ag_id]._sum_of_model_params)
-        print(f"worst_ag_id=={worst_ag_id}, worst ag param sum==",MiscUtils.get_sum_of_model_params(population[worst_ag_id]))
         print(fits)
 
 
@@ -322,17 +353,17 @@ if __name__=="__main__":
                 task_id=tsk_id)
         print(colored(f"task_info (created env): {mtw_mt1.get_task_info()}","red"))
 
-
+        
+        
+        
+        start_from_state=population[best_ag_id]._last_eval_init_state
+        start_from_obs=population[best_ag_id]._last_eval_init_obs
 
         num_experiments=1
         for ii in range(num_experiments):
             print(colored("best agent","green"))
             print("fitness in archive==",fits[best_ag_id])
-            fit, beh_desr, is_solved, _ =mtw_mt1(population[best_ag_id])
-            print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
-            print(colored("worst agent","red"))
-            print("fitness in archive==",fits[worst_ag_id])
-            fit, beh_desr, is_solved, _ =mtw_mt1(population[worst_ag_id])
+            fit, beh_desr, is_solved, _ ,_, the_init_obs, _=mtw_mt1(population[best_ag_id],forced_init_state=start_from_state,forced_init_obs=start_from_obs)
             print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
 
 

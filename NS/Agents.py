@@ -68,6 +68,9 @@ class Agent(ABC):
 
         self._sum_of_model_params=None #for debug
 
+        self._last_eval_init_state=None
+        self._first_action=None
+
 
 
 

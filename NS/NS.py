@@ -24,6 +24,8 @@ import functools
 import random
 import pdb
 import numpy as np
+from pympler import asizeof
+import gc
 
 import torch
 from scoop import futures
@@ -171,11 +173,17 @@ class NoveltySearch:
             ag._behavior_descr=xx[ag_i][1]
             ag._solved_task=xx[ag_i][2]
             ag._complete_trajs=xx[ag_i][3]#for debug only, disable it later
+                       
+            if ag._solved_task:
+                if hasattr(self.problem, "get_task_info"):
+                    ag._task_info=self.problem.get_task_info()
+                ag._last_eval_init_state=xx[ag_i][4]
+                ag._last_eval_init_obs=xx[ag_i][5]
+                ag._first_action=xx[ag_i][6]
+            
             if ag._solved_task:
                 task_solvers.append(ag)
-            
-            if hasattr(self.problem, "get_task_info"):
-                ag._task_info=self.problem.get_task_info()
+
             
         return task_solvers, elapsed
 
@@ -185,89 +193,97 @@ class NoveltySearch:
         """
         iters  int  number of iterations
         """
-        print(f"Starting NS with pop_sz={len(self._initial_pop)}, offspring_sz={self.n_offspring}")
-        print("Evaluation will take time.")
+        with torch.no_grad():
+            print(f"Starting NS with pop_sz={len(self._initial_pop)}, offspring_sz={self.n_offspring}")
+            print("Evaluation will take time.")
 
-        if save_checkpoints:
-            raise NotImplementedError("checkpoint save/load not implemented yet")
-        
-        if reinit and self.archive is not None:
-            self.archive.reset()
-
-
-        parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
-        self.eval_agents(parents)
-       
-        self.nov_estimator.update(archive=[], pop=parents)
-        novs=self.nov_estimator()#computes novelty of all population
-        for ag_i in range(len(parents)):
-            parents[ag_i]._nov=novs[ag_i]
+            if save_checkpoints:
+                raise NotImplementedError("checkpoint save/load not implemented yet")
             
-
-        #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
-        for it in range(iters):
-
-            print(colored(f"iter=={it}","red"))
-            print(colored(f"archive_size=={len(self.archive)}","red"))
-
-            offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
-            task_solvers, _ =self.eval_agents(offsprings)
-           
-            pop=parents+offsprings #all of them have _fitness and _behavior_descr now
-
-            for x in pop:
-                if x._age==-1:
-                    x._age=it+1-x._created_at_gen
-                else:
-                    x._age+=1
+            if reinit and self.archive is not None:
+                self.archive.reset()
 
 
-            self.nov_estimator.update(archive=self.archive, pop=pop)
+            parents=copy.deepcopy(self._initial_pop)#pop is a member in order to avoid passing copies to workers
+            self.eval_agents(parents)
+       
+            self.nov_estimator.update(archive=[], pop=parents)
             novs=self.nov_estimator()#computes novelty of all population
-            for ag_i in range(len(pop)):
-                pop[ag_i]._nov=novs[ag_i]
-            
-            parents_next=self.selector(individuals=pop, fit_attr="_nov")
-            
-            #for stdout only
-            p_report=[(x._idx, x._fitness, x._nov, x._task_info) for x in parents_next]
-            print("@@@@@@@@@@@@@@@@@@@@@@@\n",p_report)
+            for ag_i in range(len(parents)):
+                parents[ag_i]._nov=novs[ag_i]
+                
+
+            #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
+            for it in range(iters):
+
+                print(colored(f"iter=={it}, archive_size={len(self.archive)}","red"))
+
+                offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
+                task_solvers, _ =self.eval_agents(offsprings)
+               
+                pop=parents+offsprings #all of them have _fitness and _behavior_descr now
+
+                for x in pop:
+                    if x._age==-1:
+                        x._age=it+1-x._created_at_gen
+                    else:
+                        x._age+=1
 
 
-            if self.compute_parent_child_stats:
-                for x in parents_next:
-                    if x._bd_dist_to_parent_bd==-1 and x._created_at_gen>0:#otherwise it has already been computed in a previous generation
-                        xp=next((s for s in pop if s._idx== x._parent_idx), None)
-                        if xp is None:
-                            raise Exception("this shouldn't happen")
-                        x._bd_dist_to_parent_bd=self.problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
+                self.nov_estimator.update(archive=self.archive, pop=pop)
+                novs=self.nov_estimator()#computes novelty of all population
+                for ag_i in range(len(pop)):
+                    pop[ag_i]._nov=novs[ag_i]
+                
+                parents_next=self.selector(individuals=pop, fit_attr="_nov")
+                
+                #for stdout only
+                p_report=[(x._idx, x._fitness, x._nov, x._task_info) for x in parents_next]
+                print("@@@@@@@@@@@@@@@@@@@@@@@ FIT",max([x[1] for x in p_report]))
+                print("@@@@@@@@@@@@@@@@@@@@@@@ NOV",max([x[2] for x in p_report]))
 
-            parents=parents_next
-            if hasattr(self.nov_estimator, "train"):
-                self.nov_estimator.train(parents) 
-            if self.archive is not None:
-                self.archive.update(parents, offsprings, thresh=self.problem.dist_thresh, boundaries=[0,600],knn_k=15)
-                if self.save_archive_to_file:
-                    self.archive.dump(self.log_dir_path+f"/archive_{it}")
-            
-            self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
-            for ag in parents:
-                ag._sum_of_model_params=MiscUtils.get_sum_of_model_params(ag)
-            MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
-                                                                                     ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
-                                                                                     ############## in comparisons, but this is not clean at all, so yeah, change that  (update: what? did I ever
-                                                                                     ############## do any of that?)
-            
-            if len(task_solvers):
-                print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))
-                self.task_solvers[it]=task_solvers
-                if stop_on_reaching_task:
-                    break
 
-            #tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
-            #tqdm_gen.refresh()
+                if self.compute_parent_child_stats:
+                    for x in parents_next:
+                        if x._bd_dist_to_parent_bd==-1 and x._created_at_gen>0:#otherwise it has already been computed in a previous generation
+                            xp=next((s for s in pop if s._idx== x._parent_idx), None)
+                            if xp is None:
+                                raise Exception("this shouldn't happen")
+                            x._bd_dist_to_parent_bd=self.problem.bd_extractor.distance(x._behavior_descr,xp._behavior_descr)
+
+                parents=parents_next
+                if hasattr(self.nov_estimator, "train"):
+                    self.nov_estimator.train(parents) 
+                if self.archive is not None:
+                    self.archive.update(parents, offsprings, thresh=self.problem.dist_thresh, boundaries=[0,600],knn_k=15)
+                    if self.save_archive_to_file:
+                        self.archive.dump(self.log_dir_path+f"/archive_{it}")
+                
+                #self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+                for ag in parents:
+                    ag._sum_of_model_params=MiscUtils.get_sum_of_model_params(ag)
+
+                #for ag in self.archive:
+                #    if ag not in parents:
+                #        ag.mds=None#to save RAM
+
+                print(colored(f"ARCHIVE SIZE=={asizeof.asizeof(self.archive)/1e6}","magenta"))
+                MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
+                                                                                         ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
+                                                                                         ############## in comparisons, but this is not clean at all, so yeah, change that  (update: what? did I ever
+                                                                                         ############## do any of that?)
+                
+                if len(task_solvers):
+                    print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))
+                    self.task_solvers[it]=task_solvers
+                    if stop_on_reaching_task:
+                        break
+                gc.collect()
+
+                #tqdm_gen.set_description(f"Generation {it}/{iters}, archive_size=={len(self.archive) if self.archive is not None else -1}")
+                #tqdm_gen.refresh()
        
-        return parents, self.task_solvers#iteration:list_of_agents
+            return parents, self.task_solvers#iteration:list_of_agents
 
 
     def generate_new_agents(self, parents, generation:int):
@@ -287,6 +303,9 @@ class NoveltySearch:
             mutated_ags[i]._root=mutated_genotype[kept[i]][2]
 
         self.num_agent_instances+=len(mutated_ags)
+
+        for x in mutated_ags:
+            x.eval()
        
         return mutated_ags
     
