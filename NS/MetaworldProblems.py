@@ -270,7 +270,8 @@ class MetaWorldMT1(Problem):
                     beh[4]=closing_command
                     behavior_hist.append(beh)
                 elif self.bd_type=="type_3":
-                    behavior_hist.append(self.env.get_body_com("obj"))
+                    #behavior_hist.append(self.env.get_body_com("obj"))
+                    behavior_hist.append(self.env._get_pos_objects())#this is like calling self.env.get_body_com("obj") or self.env.get_body_com("soccer_ball") etc
 
 
 
@@ -302,8 +303,8 @@ class MetaWorldMT1(Problem):
      
             bd=self.bd_extractor.extract_behavior(np.array(behavior_hist).reshape(len(behavior_hist), len(behavior_hist[0]))) 
             complete_traj=np.concatenate([x.reshape(1,-1) for x in behavior_hist],0)
-            print(behavior_hist[-3:])
-            print(bd)                   
+            #print(behavior_hist[-3:])
+            #print(bd)                   
 
         return fitness, bd, task_solved, complete_traj, init_state, init_obs, first_action
     
@@ -348,7 +349,6 @@ class MetaWorldMT1(Problem):
 
 if __name__=="__main__":
 
-    TEST_RANDOM_AGENT=False
     TEST_BEST_AG_FROM_SAVED_POPULATION=True
     TEST_SAMPLER=False
 
@@ -356,14 +356,8 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        #pop_path="/tmp/NS_log_feWA3Gth8o_106120/population_gen_89"
-        #pop_path="//tmp//NS_log_feWA3Gth8o_37942/population_gen_26"
-        #pop_path="//tmp//NS_log_feWA3Gth8o_39498/population_gen_40"
-        #pop_path="/tmp//NS_log_feWA3Gth8o_44434/population_gen_40"
-        #pop_path="/tmp//NS_log_TC8FE2XvSR_115088/population_gen_79"
-        pop_path="/tmp//NS_log_TC8FE2XvSR_52606/population_gen_20"
-        pop_path="/tmp//NS_log_TC8FE2XvSR_54375/population_gen_88"
-        pop_path="/tmp//NS_log_TC8FE2XvSR_63821/population_gen_386"
+        pop_path="/home/achkan/Desktop//NS_log_TC8FE2XvSR_63821/population_gen_386"
+        #pop_path="/tmp//NS_log_TC8FE2XvSR_71671/population_gen_3"
 
 
 
