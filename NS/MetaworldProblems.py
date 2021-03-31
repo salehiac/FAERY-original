@@ -46,6 +46,31 @@ import MiscUtils
 from Problem import Problem
 
 
+def sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/"):
+
+    ml1=metaworld.ML1(task_name)
+    num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
+    assert num_samples<=num_possible_tasks, "too many samples required" #is this reasonnable? There is nothing wrong from sampling the same env multiple times
+    if num_samples==-1:
+        num_samples=num_possible_tasks
+    samples=[]
+    print("num_samples==",num_samples)
+   
+    for s_i in range(num_samples):
+        mt1_i=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML1_env_name=task_name, mode=mode, task_id=-1)
+        samples.append(mt1_i)
+
+    np.random.shuffle(samples)
+
+    if 1:
+        for x in samples:
+            print("*********")
+            print(x.env.goal, x.env.obj_init_pos, x.env.obj_init_angle)#for pick and place, only obj_init_pos seems to vary
+
+    return samples
+    
+
+
 
 class MetaWorldMT1(Problem):
     """
@@ -91,8 +116,9 @@ class MetaWorldMT1(Problem):
         super().__init__()
 
         self.ML1_env_name=ML1_env_name
-        self.ml1 = metaworld.ML1(self.ML1_env_name) #constructs the benchmark which is an environment. As this is ML1, only the task (i.e. the goal)
-                                          #will vary. So ml1.train_classes is going to be of lenght 1
+        self.ml1 = metaworld.ML1(self.ML1_env_name) #constructs the benchmark which is an environment. As this is ML1, only the task (e.g. the goal)
+                                          #will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
+                                          #So ml1.train_classes is going to be of lenght 1
         
         self.mode=mode
 
@@ -110,7 +136,7 @@ class MetaWorldMT1(Problem):
             self.env.set_task(self.task)  # Set task
 
         self.env.seed(seed_)
-        #self.env.random_init=False
+        #self.env.random_init=False #this doesnt' work, it is automatically set to True again in metaworld
 
 
         self.dim_obs=self.env.observation_space.shape[0]#in the latest versions of metaworld, it is 39
@@ -121,14 +147,16 @@ class MetaWorldMT1(Problem):
 
         self.bd_type=bd_type
         if bd_type=="type_0":#position only
-            self.bd_extractor=BehaviorDescr.GenericBD(dims=3,num=6)#dims*num dimensional
+            self.bd_extractor=BehaviorDescr.GenericBD(dims=3,num=2)#dims*num dimensional
         elif bd_type=="type_1":#position + gripper effector distances
-            self.bd_extractor=BehaviorDescr.GenericBD(dims=4,num=6)#dims*num dimensional
+            self.bd_extractor=BehaviorDescr.GenericBD(dims=4,num=2)#dims*num dimensional
         elif bd_type=="type_2":#position + gripper effector distances + whether gripper is opening or closing
-            self.bd_extractor=BehaviorDescr.GenericBD(dims=5,num=6)#dims*num dimensional
+            self.bd_extractor=BehaviorDescr.GenericBD(dims=5,num=2)#dims*num dimensional
+        elif bd_type=="type_3":
+            self.bd_extractor=BehaviorDescr.GenericBD(dims=3,num=1)#final position of manipulated object
         else:
             raise Exception("Unkown bd type")
-        self.dist_thresh=0 #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
+        self.dist_thresh=0.001 #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
         self.num_saved=0
 
     def get_task_info(self):
@@ -137,9 +165,11 @@ class MetaWorldMT1(Problem):
         """
         dct={}
         dct["mode"]=self.mode
+        dct["behavior_descriptor_t"]=self.bd_type
         dct["task_id"]=self.task_id
         dct["global_seed"]=seed_ 
         dct["problem constant"]=(self.env.goal, self.env.obj_init_pos,self.env.obj_init_angle)
+        dct["name"]=self.ML1_env_name
 
         return dct
 
@@ -147,7 +177,7 @@ class MetaWorldMT1(Problem):
 
         self.env.set_env_state(state)
 
-    def get_end_effector_pose(self):
+    def get_end_effector_pos(self):
 
         return self.env.get_endeff_pos()#this is as far as I know the same as obs[:3]
 
@@ -187,6 +217,10 @@ class MetaWorldMT1(Problem):
         if hasattr(ag, "eval"):#in case of torch agent
             ag.eval() 
 
+        if self.display:
+            self.env.render()
+
+
         with torch.no_grad():#replace with generic context_magager
 
             if forced_init_state is None:
@@ -206,10 +240,17 @@ class MetaWorldMT1(Problem):
             fitness=0
             behavior_hist=[]
             task_solved=False
-            for i in range(self.max_steps):
+
+            seems_stuck=0
+            stuck_thresh=1e-5
+            prev_eff_pos=self.get_end_effector_pos()
+
+            for it in range(0,self.max_steps):
+
+                #print(colored(f"it=={it},max_steps={self.max_steps}, seems_stuck={seems_stuck}","magenta",attrs=["bold","reverse"]))
                 if self.display:
                     self.env.render()
-                    time.sleep(0.05)
+                    time.sleep(0.01)
 
                 action=ag(obs)
                 if first_action is None:
@@ -228,13 +269,36 @@ class MetaWorldMT1(Problem):
                     beh[:4]=obs[:4].copy()
                     beh[4]=closing_command
                     behavior_hist.append(beh)
+                elif self.bd_type=="type_3":
+                    behavior_hist.append(self.env.obj_init_pos)
 
+
+                diff_effpos=np.linalg.norm(self.get_end_effector_pos()-prev_eff_pos)
+                if diff_effpos<stuck_thresh:
+                    seems_stuck+=1
+                else:
+                    seems_stuck=0
+                
+                prev_eff_pos=self.get_end_effector_pos()
+                
+                if seems_stuck>80:#don't set that number too low, since if it doesn't move but closes/opens the gripper it doesn't mena it's stuck
+                    #print("seems_stuck==",seems_stuck)
+                    #print("stuck. ending episode.")
+                    task_solved=False
+                    done=True
+                    reward-=1
+                    
                 fitness+=reward
                 if info["success"]:
-                    task_solved=True
+                    task_solved=True#if it is stuck but solves the task, it's okay
                     done=True
+               
                 if done:
+                    #print("task done")
+                    #print("success==",info["success"])
                     break
+
+     
                    
             bd=self.bd_extractor.extract_behavior(np.array(behavior_hist).reshape(len(behavior_hist), len(behavior_hist[0]))) 
             complete_traj=np.concatenate([x.reshape(1,-1) for x in behavior_hist],0)
@@ -284,32 +348,9 @@ if __name__=="__main__":
 
     TEST_RANDOM_AGENT=False
     TEST_BEST_AG_FROM_SAVED_POPULATION=True
+    TEST_SAMPLER=False
 
 
-    if TEST_RANDOM_AGENT:
-
-        mtw_mt1=MetaWorldMT1(bd_type="type_1", 
-                max_steps=-1, 
-                display=True, 
-                assets={}, 
-                ML1_env_name="pick-place-v2",
-                mode="train")
-        
-        import Agents
-
-        dummy_ag=Agents.SmallFC_FW(idx=-1,
-                in_d=39,
-                out_d=4,
-                num_hidden=2,
-                hidden_dim=70,
-                non_lin="tanh",
-                use_bn=False,
-                output_normalisation=mtw_mt1.action_normalisation())
-
-        num_experiments=1
-        for ii in range(num_experiments):
-            fit, beh_desr, is_solved=mtw_mt1(dummy_ag)
-            print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
@@ -317,7 +358,9 @@ if __name__=="__main__":
         #pop_path="//tmp//NS_log_feWA3Gth8o_37942/population_gen_26"
         #pop_path="//tmp//NS_log_feWA3Gth8o_39498/population_gen_40"
         #pop_path="/tmp//NS_log_feWA3Gth8o_44434/population_gen_40"
-        pop_path="/tmp//NS_log_TC8FE2XvSR_115088/population_gen_79"
+        #pop_path="/tmp//NS_log_TC8FE2XvSR_115088/population_gen_79"
+        pop_path="/tmp//NS_log_TC8FE2XvSR_52606/population_gen_20"
+        pop_path="/tmp//NS_log_TC8FE2XvSR_54375/population_gen_5"
 
 
 
@@ -329,14 +372,14 @@ if __name__=="__main__":
             population=pickle.load(fl)
             
         fits=[x._fitness for x in population]
-        #novs=[x._nov for x in population]
-        #best_ag_id=np.argmax(fits)
+        novs=[x._nov for x in population]
         solvers=[i for i in range(len(population)) if population[i]._solved_task]
         print("SOLVERS==",solvers)
         best_ag_id=solvers[0]
+        #best_ag_id=np.argmax(fits)
+        #best_ag_id=np.argmax(novs)
         print("best_agent saved param sum==",population[best_ag_id]._sum_of_model_params)
         print(f"best_ag_id=={best_ag_id},  best ag param sum==",MiscUtils.get_sum_of_model_params(population[best_ag_id]))
-        print(fits)
 
 
         train_or_test=population[best_ag_id]._task_info["mode"]
@@ -344,11 +387,11 @@ if __name__=="__main__":
 
         print(colored(f"task_info (saved): {population[0]._task_info}","red"))
         
-        mtw_mt1=MetaWorldMT1(bd_type="type_1", 
+        mtw_mt1=MetaWorldMT1(bd_type=population[best_ag_id]._task_info["behavior_descriptor_t"], 
                 max_steps=-1, 
                 display=True, 
                 assets={}, 
-                ML1_env_name="pick-place-v2",
+                ML1_env_name=population[best_ag_id]._task_info["name"],
                 mode=train_or_test,
                 task_id=tsk_id)
         print(colored(f"task_info (created env): {mtw_mt1.get_task_info()}","red"))
@@ -366,4 +409,8 @@ if __name__=="__main__":
             fit, beh_desr, is_solved, _ ,_, the_init_obs, _=mtw_mt1(population[best_ag_id],forced_init_state=start_from_state,forced_init_obs=start_from_obs)
             print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
 
+    if TEST_SAMPLER:
+
+        print("hello")
+        sample_envs=sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/")
 

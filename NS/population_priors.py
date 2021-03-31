@@ -391,7 +391,7 @@ class MetaQDForSparseRewards:
 if __name__=="__main__":
 
     TRAIN_WITH_RANDOM_2D_MAZES=True
-    TEST_FROM_POP_ONLY=False
+    TRAIN_METAWORLD=False
     
     if TRAIN_WITH_RANDOM_2D_MAZES:
 
@@ -432,61 +432,10 @@ if __name__=="__main__":
                 top_level_log_root="/scratchbeta/salehia/distributed/meta_LOGS/")
 
         algo()
+
+        if TRAIN_METAWORLD:
+            pass
     
-    elif TEST_FROM_POP_ONLY:
-
-        train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train"
-        test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test"
-
-        num_train_samples=75
-        num_test_samples=1
-
-        train_sampler=functools.partial(HardMaze.sample_mazes,
-                G=8, 
-                xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//scratchbeta/salehia/garbage_dir//",
-                from_dataset=train_dataset_path,
-                random_goals=False)
-        
-        
-        test_sampler=functools.partial(HardMaze.sample_mazes,
-                G=8, 
-                xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="//scratchbeta/salehia/garbage_dir//",
-                from_dataset=test_dataset_path,
-                random_goals=False)
-
-        algo=MetaQDForSparseRewards(pop_sz=24,
-                off_sz=24,
-                G_outer=100,
-                G_inner=200,
-                train_sampler=train_sampler,
-                test_sampler=test_sampler,
-                num_train_samples=num_train_samples,
-                num_test_samples=num_test_samples,
-                top_level_log_root="/scratchbeta/salehia/generalisation_paper/")
-
-
-        population_dir=sys.argv[1]
-        pop_fls=os.listdir(population_dir)
-        pop_fls=[x for x in pop_fls if "population_prior_" in x]
-
-        test_pbs=test_sampler(num_samples=num_test_samples)
-
-        population_solutions=[]#population_solutions[i,j]==depth at which population i solves problem j
-        for i in range(len(pop_fls)):
-          pfl=pop_fls[i]
-          with open(population_dir+"/"+pfl,"rb") as fl:
-            population_to_test=pickle.load(fl)
-         
-          pb_solutions=[]
-          for pb_i in range(len(test_pbs)):
-            depth_val=algo.test_population(population_to_test, test_pbs[pb_i])
-            pb_solutions.append(depth_val)
-          population_solutions.append(pb_solutions)
-
-        population_solutions=np.array(population_solutions)
-        np.savez_compressed("/home/salehia/population_solutions",population_solutions)
 
 
 

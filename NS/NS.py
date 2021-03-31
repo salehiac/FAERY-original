@@ -173,13 +173,13 @@ class NoveltySearch:
             ag._behavior_descr=xx[ag_i][1]
             ag._solved_task=xx[ag_i][2]
             ag._complete_trajs=xx[ag_i][3]#for debug only, disable it later
+            ag._last_eval_init_state=xx[ag_i][4]
+            ag._last_eval_init_obs=xx[ag_i][5]
+            ag._first_action=xx[ag_i][6]
                        
-            if ag._solved_task:
-                if hasattr(self.problem, "get_task_info"):
-                    ag._task_info=self.problem.get_task_info()
-                ag._last_eval_init_state=xx[ag_i][4]
-                ag._last_eval_init_obs=xx[ag_i][5]
-                ag._first_action=xx[ag_i][6]
+            if hasattr(self.problem, "get_task_info"):
+                ag._task_info=self.problem.get_task_info()
+                
             
             if ag._solved_task:
                 task_solvers.append(ag)

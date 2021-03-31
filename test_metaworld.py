@@ -20,7 +20,7 @@ obs_spcaes=[]
 for bn_name in metaworld.ML1.ENV_NAMES:
 
     print(bn_name)
-    bn_name="basketball-v2"
+    #bn_name="basketball-v2"
     #bn_name="pick-place-v2"
 
     ml1 = metaworld.ML1(bn_name) #constructs the benchmark which is an environment. As this is ML1, only the task (i.e. the goal)
@@ -31,8 +31,6 @@ for bn_name in metaworld.ML1.ENV_NAMES:
     env = ml1.train_classes[bn_name]()  
     task = random.choice(ml1.train_tasks)#changes goal
 
-    break
-
     env.set_task(task)  # Set task
     
     obs = env.reset()  # Reset environment
@@ -40,22 +38,24 @@ for bn_name in metaworld.ML1.ENV_NAMES:
     action_spaces.append(env.action_space.sample().shape)
     obs_spcaes.append(env.observation_space.sample().shape)
 
-    if 1:
-        for step in range(env.max_path_length):
-        #for step in range(10):
+
+    #print(colored(f"obj_init_angle, obj_init_pos, goal=={env.obj_init_angle}   ,  {env.obj_init_pos}    ,  {env.goal}", "red"))
+    print(colored(f"obj_init_pos, goal=={env.obj_init_pos}    ,  {env.goal}", "red"))
+    if 0:
+        #for step in range(env.max_path_length):
+        for step in range(300):
             #print("curr_path_length==",env.curr_path_length)
             env.render()
             a = env.action_space.sample()  # Sample an action
             #a = [1,1,1,0.1]
             #a = [1,1,1,1]
             a=[0,0,0,0.1]
-            print(obs[:4])
-            print(colored(env._get_site_pos('rightEndEffector'),"red"))
-            print(colored(env._get_site_pos('leftEndEffector'),"red"))
-            print(colored(np.linalg.norm(env._get_site_pos('rightEndEffector')-env._get_site_pos('leftEndEffector')),"red"))
+            #print(obs[:4])
+            #print(colored(env._get_site_pos('rightEndEffector'),"red"))
+            #print(colored(env._get_site_pos('leftEndEffector'),"red"))
+            #print(colored(np.linalg.norm(env._get_site_pos('rightEndEffector')-env._get_site_pos('leftEndEffector')),"red"))
 
             obs, reward, done, info = env.step(a)
             time.sleep(1/60)
 
     env.close()
-    break
