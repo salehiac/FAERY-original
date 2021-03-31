@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 import Archives
 import NS
 import HardMaze
+import MetaworldProblems
 import NoveltyEstimators
 import Agents
 import MiscUtils
@@ -94,6 +95,20 @@ def _make_2d_maze_ag(ag_idx):
             output_normalisation="")
     return agt
 
+def _make_metaworld_ml1_ag(ag_idx):
+    """
+    because scoop only likes top-level functions/objects...
+    """
+    agt=Agents.SmallFC_FW(ag_idx,
+            in_d=39,
+            out_d=4,
+            num_hidden=2,
+            hidden_dim=50,
+            output_normalisation="tanh")
+    return agt
+
+
+
 
 
 def ns_instance(
@@ -126,7 +141,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/scratchbeta/salehia/distributed/NS_LOGS/",
+            logs_root="/tmp/garbage_dir2/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -174,6 +189,7 @@ class MetaQDForSparseRewards:
             test_sampler,
             num_train_samples,
             num_test_samples,
+            agent_factory,
             top_level_log_root="//scratchbeta/salehia/mqd_tmp//"):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on test data, but on meta observations from the inner loop. So the
@@ -186,6 +202,7 @@ class MetaQDForSparseRewards:
         test_sampler         function     any object/functor/function with a __call__ that returns a list of problems from a test distribution of environments
         num_train_samples    int          number of environments to use at each outer_loop generation for training
         num_test_samples     int          number of environments to use at each outer_loop generation for testing
+        agent_factory        function     either _make_2d_maze_ag or _make_metaworld_ml1_ag
         top_level_log_root   str          where to save the population after each top_level optimisation
         """
 
@@ -197,20 +214,21 @@ class MetaQDForSparseRewards:
         self.test_sampler=test_sampler
         self.num_train_samples=num_train_samples
         self.num_test_samples=num_test_samples
+        self.agent_factory=agent_factory
         
         if os.path.isdir(top_level_log_root):
             dir_path=MiscUtils.create_directory_with_pid(dir_basename=top_level_log_root+"/meta-learning_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
             print(colored("[NS info] temporary dir for meta-learning was created: "+dir_path, "blue",attrs=[]))
         else:
-            raise Exception("tmp_dir doesn't exist")
+            raise Exception(f"tmp_dir ({top_level_log_root}) doesn't exist")
         
         self.top_level_log=dir_path
     
         self.mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=10, low=-1.0, up=1.0, indpb=0.1)
 
         ###NOTE: if at some point you add the possibility of resuming from an already given pop, don't forget to rest their _useful_evolvability etc to 0/infinity whatever
-        initial_pop=[_make_2d_maze_ag(i) for i in range(pop_sz)]
-        initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, _make_2d_maze_ag)
+        initial_pop=[self.agent_factory(i) for i in range(pop_sz)]
+        initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, self.agent_factory)
         self.num_total_agents=pop_sz#total number of generated agents from now on (including discarded agents)
 
         self.pop=initial_pop
@@ -246,7 +264,7 @@ class MetaQDForSparseRewards:
             #
             #Now, problems are sampled from the constructor of each NS instance.
           
-            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, _make_2d_maze_ag, self.num_total_agents)
+            offsprings=_mutate_prior_pop(self.off_sz, self.pop, self.mutator, self.agent_factory, self.num_total_agents)
             self.num_total_agents+=len(offsprings)
 
             tmp_pop=self.pop + offsprings #don't change the order of this concatenation
@@ -260,7 +278,7 @@ class MetaQDForSparseRewards:
                 [[x for x in tmp_pop] for i in range(self.num_train_samples)],#population
                 [self.mutator for i in range(self.num_train_samples)],#mutator
                 [self.inner_selector for i in range(self.num_train_samples)],#inner_selector
-                [_make_2d_maze_ag for i in range(self.num_train_samples)],#make_ag
+                [self.agent_factory for i in range(self.num_train_samples)],#make_ag
                 [self.G_inner for i in range(self.num_train_samples)]))#G_inner
 
             roots_lst=[m[0] for m in metadata]
@@ -327,7 +345,7 @@ class MetaQDForSparseRewards:
                     [[x for x in self.pop] for i in range(self.num_test_samples)],#population
                     [self.mutator for i in range(self.num_test_samples)],#mutator
                     [self.inner_selector for i in range(self.num_test_samples)],#inner_selector
-                    [_make_2d_maze_ag for i in range(self.num_test_samples)],#make_ag
+                    [self.agent_factory for i in range(self.num_test_samples)],#make_ag
                     [self.G_inner for i in range(self.num_test_samples)]))#G_inner
                 
                 for pb_t in range(self.num_test_samples):
@@ -364,7 +382,7 @@ class MetaQDForSparseRewards:
                 selector=self.inner_selector,
                 n_pop=population_size,
                 n_offspring=offsprings_size,
-                agent_factory=_make_2d_maze_ag,
+                agent_factory=self.agent_factory,
                 visualise_bds_flag=1,#log to file
                 map_type="scoop",#or "std"
                 logs_root="//scratchbeta/salehia/test_dir_tmp//",
@@ -390,8 +408,8 @@ class MetaQDForSparseRewards:
 
 if __name__=="__main__":
 
-    TRAIN_WITH_RANDOM_2D_MAZES=True
-    TRAIN_METAWORLD=False
+    TRAIN_WITH_RANDOM_2D_MAZES=False
+    TRAIN_METAWORLD_ML1=True
     
     if TRAIN_WITH_RANDOM_2D_MAZES:
 
@@ -429,13 +447,45 @@ if __name__=="__main__":
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
+                agent_factory=_make_2d_maze_ag,
                 top_level_log_root="/scratchbeta/salehia/distributed/meta_LOGS/")
 
         algo()
 
-        if TRAIN_METAWORLD:
-            pass
-    
+    if TRAIN_METAWORLD_ML1:
+        
+        num_train_samples=50
+        num_test_samples=30
+
+        task_name="pick-place-v2"
+        behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
+
+        train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
+                bd_type=behavior_descr_type,
+                mode="train",
+                task_name=task_name,
+                tmp_dir="/tmp/meta_test/train/")
+        
+        test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
+                bd_type=behavior_descr_type,
+                mode="test",
+                task_name=task_name,
+                tmp_dir="/tmp/meta_test/test/")
+        
+        algo=MetaQDForSparseRewards(pop_sz=125,
+                off_sz=125,
+                G_outer=200,
+                G_inner=1000,
+                train_sampler=train_sampler,
+                test_sampler=test_sampler,
+                num_train_samples=num_train_samples,
+                num_test_samples=num_test_samples,
+                agent_factory=_make_metaworld_ml1_ag,
+                top_level_log_root="/tmp/garbage_dir/")
+
+        algo()
+
+
 
 
 

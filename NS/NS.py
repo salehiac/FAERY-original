@@ -132,7 +132,7 @@ class NoveltySearch:
             initial_pop=[self.agent_factory(i) for i in range(n_pop)]
             initial_pop=self.generate_new_agents(initial_pop, generation=0)
         else:
-            assert len(initial_pop)==self.n_pop," this shouldn't happen"
+            assert len(initial_pop)==n_pop," this shouldn't happen"
             for x in initial_pop:
                 x._created_at_gen=0
         

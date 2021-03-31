@@ -50,6 +50,7 @@ def sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",tas
 
     ml1=metaworld.ML1(task_name)
     num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
+    #pdb.set_trace()
     assert num_samples<=num_possible_tasks, "too many samples required" #is this reasonnable? There is nothing wrong from sampling the same env multiple times
     if num_samples==-1:
         num_samples=num_possible_tasks
