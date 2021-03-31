@@ -270,7 +270,8 @@ class MetaWorldMT1(Problem):
                     beh[4]=closing_command
                     behavior_hist.append(beh)
                 elif self.bd_type=="type_3":
-                    behavior_hist.append(self.env.obj_init_pos)
+                    behavior_hist.append(self.env.get_body_com("obj"))
+
 
 
                 diff_effpos=np.linalg.norm(self.get_end_effector_pos()-prev_eff_pos)
@@ -299,9 +300,10 @@ class MetaWorldMT1(Problem):
                     break
 
      
-                   
             bd=self.bd_extractor.extract_behavior(np.array(behavior_hist).reshape(len(behavior_hist), len(behavior_hist[0]))) 
             complete_traj=np.concatenate([x.reshape(1,-1) for x in behavior_hist],0)
+            print(behavior_hist[-3:])
+            print(bd)                   
 
         return fitness, bd, task_solved, complete_traj, init_state, init_obs, first_action
     
@@ -360,7 +362,8 @@ if __name__=="__main__":
         #pop_path="/tmp//NS_log_feWA3Gth8o_44434/population_gen_40"
         #pop_path="/tmp//NS_log_TC8FE2XvSR_115088/population_gen_79"
         pop_path="/tmp//NS_log_TC8FE2XvSR_52606/population_gen_20"
-        pop_path="/tmp//NS_log_TC8FE2XvSR_54375/population_gen_5"
+        pop_path="/tmp//NS_log_TC8FE2XvSR_54375/population_gen_88"
+        pop_path="/tmp//NS_log_TC8FE2XvSR_63821/population_gen_386"
 
 
 
@@ -378,6 +381,7 @@ if __name__=="__main__":
         best_ag_id=solvers[0]
         #best_ag_id=np.argmax(fits)
         #best_ag_id=np.argmax(novs)
+        #best_ag_id=42
         print("best_agent saved param sum==",population[best_ag_id]._sum_of_model_params)
         print(f"best_ag_id=={best_ag_id},  best ag param sum==",MiscUtils.get_sum_of_model_params(population[best_ag_id]))
 
