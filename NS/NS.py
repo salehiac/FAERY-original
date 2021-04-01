@@ -24,7 +24,6 @@ import functools
 import random
 import pdb
 import numpy as np
-from pympler import asizeof
 import gc
 
 import torch
@@ -229,9 +228,9 @@ class NoveltySearch:
                 parents_next=self.selector(individuals=pop, fit_attr="_nov")
                 
                 #for stdout only
-                p_report=[(x._idx, x._fitness, x._nov, x._task_info) for x in parents_next]
-                print("@@@@@@@@@@@@@@@@@@@@@@@ FIT",max([x[1] for x in p_report]))
-                print("@@@@@@@@@@@@@@@@@@@@@@@ NOV",max([x[2] for x in p_report]))
+                #p_report=[(x._idx, x._fitness, x._nov, x._task_info) for x in parents_next]
+                #print("@@@@@@@@@@@@@@@@@@@@@@@ FIT",max([x[1] for x in p_report]))
+                #print("@@@@@@@@@@@@@@@@@@@@@@@ NOV",max([x[2] for x in p_report]))
 
 
                 if self.compute_parent_child_stats:
@@ -250,15 +249,16 @@ class NoveltySearch:
                     if self.save_archive_to_file:
                         self.archive.dump(self.log_dir_path+f"/archive_{it}")
                 
-                #self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
-                for ag in parents:
-                    ag._sum_of_model_params=MiscUtils.get_sum_of_model_params(ag)
+                if len(task_solvers): 
+                  self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+                
+                #for ag in parents:
+                #    ag._sum_of_model_params=MiscUtils.get_sum_of_model_params(ag)
 
                 #for ag in self.archive:
                 #    if ag not in parents:
                 #        ag.mds=None#to save RAM
 
-                print(colored(f"ARCHIVE SIZE=={asizeof.asizeof(self.archive)/1e6}","magenta"))
                 MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
                                                                                          ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
                                                                                          ############## in comparisons, but this is not clean at all, so yeah, change that  (update: what? did I ever

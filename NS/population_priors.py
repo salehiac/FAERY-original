@@ -131,7 +131,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/tmp/garbage_dir2/",
+            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -444,8 +444,8 @@ if __name__=="__main__":
 
     if TRAIN_METAWORLD_ML1:
         
-        num_train_samples=3
-        num_test_samples=1
+        num_train_samples=40
+        num_test_samples=30
 
         task_name="pick-place-v2"
         behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
@@ -454,24 +454,24 @@ if __name__=="__main__":
                 bd_type=behavior_descr_type,
                 mode="train",
                 task_name=task_name,
-                tmp_dir="/tmp/meta_test/train/")
+                tmp_dir=None)
         
         test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
                 bd_type=behavior_descr_type,
                 mode="test",
                 task_name=task_name,
-                tmp_dir="/tmp/meta_test/test/")
+                tmp_dir=None)
         
         algo=MetaQDForSparseRewards(pop_sz=125,
                 off_sz=125,
-                G_outer=200,
-                G_inner=1000,
+                G_outer=300,
+                G_inner=800,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_factory=_make_metaworld_ml1_ag,
-                top_level_log_root="/tmp/garbage_dir/")
+                top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS/")
 
         algo()
 
