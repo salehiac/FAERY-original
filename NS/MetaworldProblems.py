@@ -46,22 +46,25 @@ import MiscUtils
 from Problem import Problem
 
 
-def sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/"):
+def sample_from_ml1_single_task(bd_type="type_1",num_samples=1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/"):
 
     ml1=metaworld.ML1(task_name)
-    num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
-    #pdb.set_trace()
-    assert num_samples<=num_possible_tasks, "too many samples required" #is this reasonnable? There is nothing wrong from sampling the same env multiple times
-    if num_samples==-1:
-        num_samples=num_possible_tasks
-    samples=[]
-    print("num_samples==",num_samples)
+    #num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
+    num_possible_tasks=10
+    
+    one_sample_per_env=[]
    
-    for s_i in range(num_samples):
+    for s_i in range(num_possible_tasks):
+        print("s_i==",s_i)
         mt1_i=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML1_env_name=task_name, mode=mode, task_id=-1)
-        samples.append(mt1_i)
+        one_sample_per_env.append(mt1_i)
 
-    np.random.shuffle(samples)
+    tmp_rand_state=np.random.get_state()
+    np.random.seed()
+    rand_int=np.random.randint(num_possible_tasks)
+    np.random.set_state(tmp_rand_state)
+    #print(rand_int)
+    samples=[one_sample_per_env[rand_int]]
 
     if 1:
         for x in samples:

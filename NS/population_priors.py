@@ -454,15 +454,15 @@ if __name__=="__main__":
 
     if TRAIN_METAWORLD_ML1:
         
-        num_train_samples=50
-        num_test_samples=30
+        num_train_samples=3
+        num_test_samples=1
 
         task_name="pick-place-v2"
         behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
         train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
                 bd_type=behavior_descr_type,
-                mode="train",
+                mode="test",
                 task_name=task_name,
                 tmp_dir="/tmp/meta_test/train/")
         
