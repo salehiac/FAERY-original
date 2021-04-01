@@ -444,8 +444,8 @@ if __name__=="__main__":
 
     if TRAIN_METAWORLD_ML1:
         
-        num_train_samples=40
-        num_test_samples=30
+        num_train_samples=20
+        num_test_samples=20
 
         task_name="pick-place-v2"
         behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
@@ -474,6 +474,8 @@ if __name__=="__main__":
                 top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS/")
 
         algo()
+
+        print("ended algo")
 
 
 
