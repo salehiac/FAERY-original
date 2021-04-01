@@ -22,20 +22,11 @@ import pdb
 import sys
 import os
 import random
+import gc
 
 import torch
 from scoop import futures
 from termcolor import colored
-
-"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
-hasn't been merged)"""
-with open("../common_config/seed_file","r") as fl:
-    lns=fl.readlines()
-    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
-    seed_=int(lns[0].strip())
-    np.random.seed(seed_)
-    random.seed(seed_)
-    torch.manual_seed(seed_)
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -45,26 +36,22 @@ import BehaviorDescr
 import MiscUtils
 from Problem import Problem
 
-
-def sample_from_ml1_single_task(bd_type="type_1",num_samples=1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/"):
+def sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/"):
 
     ml1=metaworld.ML1(task_name)
-    #num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
-    num_possible_tasks=10
-    
-    one_sample_per_env=[]
+    num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
+    #pdb.set_trace()
+    assert num_samples<=num_possible_tasks, "too many samples required" #is this reasonnable? There is nothing wrong from sampling the same env multiple times
+    if num_samples==-1:
+        num_samples=num_possible_tasks
+    samples=[]
+    print("num_samples==",num_samples)
    
-    for s_i in range(num_possible_tasks):
-        print("s_i==",s_i)
+    for s_i in range(num_samples):
         mt1_i=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML1_env_name=task_name, mode=mode, task_id=-1)
-        one_sample_per_env.append(mt1_i)
+        samples.append(mt1_i)
 
-    tmp_rand_state=np.random.get_state()
-    np.random.seed()
-    rand_int=np.random.randint(num_possible_tasks)
-    np.random.set_state(tmp_rand_state)
-    #print(rand_int)
-    samples=[one_sample_per_env[rand_int]]
+    np.random.shuffle(samples)
 
     if 1:
         for x in samples:
@@ -72,7 +59,7 @@ def sample_from_ml1_single_task(bd_type="type_1",num_samples=1,mode="train",task
             print(x.env.goal, x.env.obj_init_pos, x.env.obj_init_angle)#for pick and place, only obj_init_pos seems to vary
 
     return samples
-    
+ 
 
 
 
@@ -139,7 +126,7 @@ class MetaWorldMT1(Problem):
             self.task=self.ml1.test_tasks[self.task_id]#changes goal
             self.env.set_task(self.task)  # Set task
 
-        self.env.seed(seed_)
+        #self.env.seed(seed_)
         #self.env.random_init=False #this doesnt' work, it is automatically set to True again in metaworld
 
 
@@ -171,7 +158,7 @@ class MetaWorldMT1(Problem):
         dct["mode"]=self.mode
         dct["behavior_descriptor_t"]=self.bd_type
         dct["task_id"]=self.task_id
-        dct["global_seed"]=seed_ 
+        #dct["global_seed"]=seed_ 
         dct["problem constant"]=(self.env.goal, self.env.obj_init_pos,self.env.obj_init_angle)
         dct["name"]=self.ML1_env_name
 
@@ -346,7 +333,10 @@ class MetaWorldMT1(Problem):
         else:
             plt.savefig(save_to+f"/gen_{self.num_saved}.png")
             self.num_saved+=1
-            plt.close()
+
+        fig.clf()
+        plt.close("all")
+        gc.collect()
 
 
 

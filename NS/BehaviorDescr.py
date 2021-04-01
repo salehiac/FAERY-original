@@ -22,15 +22,6 @@ import torch
 
 import pdb
 
-"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
-hasn't been merged)"""
-with open("../common_config/seed_file","r") as fl:
-    lns=fl.readlines()
-    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
-    seed_=int(lns[0].strip())
-    np.random.seed(seed_)
-    torch.manual_seed(seed_)
-
 import MiscUtils
 
 class BehaviorDescr:

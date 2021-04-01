@@ -15,16 +15,6 @@ import argparse
 from termcolor import colored
 import pickle
 
-"""This is ugly, but necessary because of repeatability issues with metaworld (the PR that allows setting the seed 
-hasn't been merged)"""
-with open("../common_config/seed_file","r") as fl:
-    lns=fl.readlines()
-    assert len(lns)==1, "seed_file should only contain a single seed, nothing more"
-    seed_=int(lns[0].strip())
-    np.random.seed(seed_)
-    random.seed(seed_)
-    torch.manual_seed(seed_)
-
 
 import deap
 from deap import tools as deap_tools
@@ -462,7 +452,7 @@ if __name__=="__main__":
 
         train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
                 bd_type=behavior_descr_type,
-                mode="test",
+                mode="train",
                 task_name=task_name,
                 tmp_dir="/tmp/meta_test/train/")
         
