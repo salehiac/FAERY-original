@@ -444,10 +444,12 @@ if __name__=="__main__":
 
     if TRAIN_METAWORLD_ML1:
         
-        num_train_samples=20
-        num_test_samples=20
+        num_train_samples=10
+        num_test_samples=10
 
-        task_name="pick-place-v2"
+        task_name="pick-place-v2"   #1st and 3rd experiments
+        #task_name="basketball-v2"  #2nd experiment
+        #task_name="shelf-place-v2" #crashed
         behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
         train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
@@ -462,8 +464,8 @@ if __name__=="__main__":
                 task_name=task_name,
                 tmp_dir=None)
         
-        algo=MetaQDForSparseRewards(pop_sz=125,
-                off_sz=125,
+        algo=MetaQDForSparseRewards(pop_sz=28,
+                off_sz=28,
                 G_outer=300,
                 G_inner=800,
                 train_sampler=train_sampler,

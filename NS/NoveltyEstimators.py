@@ -149,7 +149,7 @@ class LearnedNovelty1d(NoveltyEstimator):
                 e_pred=self.learnt(batch)
                 diff=(e_pred-e_frozen)**2
                 diff=diff.sum(1)
-                print("loss nov==",diff.mean().item())
+                #print("loss nov==",diff.mean().item())
                 pop_novs+=diff.cpu().detach().tolist()
         
         #print("******************************* novs ******************************",sorted(pop_novs)[::-1])
@@ -169,7 +169,7 @@ class LearnedNovelty1d(NoveltyEstimator):
         pop_bds=np.concatenate(pop_bds, 0)
         for _ in range(3):
             for i in range(0,pop_bds.shape[0],self.batch_sz):
-                print("i==",i)
+                #print("i==",i)
                 batch=torch.Tensor(pop_bds[i:i+self.batch_sz])
                 #batch=torch.Tensor(pop_bds[random.choices(range(len(self.pop)),k=(min(self.batch_sz,len(self.pop)))),:])
                 #pdb.set_trace()
@@ -192,7 +192,7 @@ class LearnedNovelty1d(NoveltyEstimator):
                 loss=loss.mean().clone()
                 #loss/=self.batch_sz
                 #print(batch)
-                print("loss==",loss.item())
+                #print("loss==",loss.item())
                 #pdb.set_trace()
                 if torch.isnan(loss).any():
                     raise Exception("loss is Nan. Maybe tray reducing the learning rate")

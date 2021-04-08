@@ -524,7 +524,7 @@ class NSGA2:
         self.k=k
         
     def __call__(self, individuals, fit_attr=None, automatic_threshold=False):
-        print("automatic_threshold=",automatic_threshold)
+        #print("automatic_threshold=",automatic_threshold)
         individual_novs=[x._nov for x in individuals]
         if automatic_threshold:
             md=np.median(individual_novs)
@@ -579,7 +579,7 @@ def make_networks_divergent(frozen, trained, frozen_domain_limits, iters):
         loss.backward()
         optimizer.step()
 
-        print(loss.item())
+        #print(loss.item())
 
 
 def plot_matrix_with_textual_values(matrix, x_ticks=[], y_ticks=[], title_str="mat"):
@@ -698,7 +698,7 @@ if __name__=="__main__":
                 im, _ = next(test_iter)
                 im=im.cuda()
                 _, out, loss =ae(im)
-                print("loss_val==",loss.item())
+                #print("loss_val==",loss.item())
                 in_data=im[0,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                 out=out[0,:,:,:].transpose(0,1).transpose(1,2).cpu().detach().numpy()
                 result=np.concatenate([in_data,out],1)

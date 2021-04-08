@@ -107,7 +107,7 @@ class NoveltySearch:
         
         self.map_type=map_type
         self._map=futures.map if map_type=="scoop" else map
-        print(colored("[NS info] Using map_type "+map_type, "green",attrs=["bold"]))
+        #print(colored("[NS info] Using map_type "+map_type, "green",attrs=["bold"]))
 
         self.mutator=mutator
         self.selector=selector
@@ -136,7 +136,7 @@ class NoveltySearch:
         if os.path.isdir(logs_root):
             self.logs_root=logs_root
             self.log_dir_path=MiscUtils.create_directory_with_pid(dir_basename=logs_root+"/NS_log_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
-            print(colored("[NS info] NS log directory was created: "+self.log_dir_path, "green",attrs=["bold"]))
+            #print(colored("[NS info] NS log directory was created: "+self.log_dir_path, "green",attrs=["bold"]))
         else:
             raise Exception("Root dir for logs not found. Please ensure that it exists before launching the script.")
 
@@ -184,8 +184,8 @@ class NoveltySearch:
         iters  int  number of iterations
         """
         with torch.no_grad():
-            print(f"Starting NS with pop_sz={len(self._initial_pop)}, offspring_sz={self.n_offspring}")
-            print("Evaluation will take time.")
+            print(f"Starting NS with pop_sz={len(self._initial_pop)}, offspring_sz={self.n_offspring}", flush=True)
+            #print("Evaluation will take time.")
 
             if save_checkpoints:
                 raise NotImplementedError("checkpoint save/load not implemented yet")
@@ -206,7 +206,7 @@ class NoveltySearch:
             #tqdm_gen = tqdm.trange(iters, desc='', leave=True, disable=self.disable_tqdm)
             for it in range(iters):
 
-                print(colored(f"iter=={it}, archive_size={len(self.archive)}","red"))
+                #print(colored(f"iter=={it}, archive_size={len(self.archive)}","red"))
 
                 offsprings=self.generate_new_agents(parents, generation=it+1)#mutations and crossover happen here  <<= deap can be useful here
                 task_solvers, _ =self.eval_agents(offsprings)
@@ -259,13 +259,10 @@ class NoveltySearch:
                 #    if ag not in parents:
                 #        ag.mds=None#to save RAM
 
-                MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) ############## TODO: it's a bad idea to save AFTER training... This reduces inital novelty, which is therefore
-                                                                                         ############## favoring archive-based methods in comparisons... Hack: for now, I'll take that into account
-                                                                                         ############## in comparisons, but this is not clean at all, so yeah, change that  (update: what? did I ever
-                                                                                         ############## do any of that?)
+                #MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) 
                 
                 if len(task_solvers):
-                    print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]))
+                    print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]),flush=True)
                     self.task_solvers[it]=task_solvers
                     if stop_on_reaching_task:
                         break
