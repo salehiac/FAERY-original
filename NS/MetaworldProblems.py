@@ -144,7 +144,8 @@ class MetaWorldMT1(Problem):
         elif bd_type=="type_2":#position + gripper effector distances + whether gripper is opening or closing
             self.bd_extractor=BehaviorDescr.GenericBD(dims=5,num=2)#dims*num dimensional
         elif bd_type=="type_3":
-            self.bd_extractor=BehaviorDescr.GenericBD(dims=3,num=1)#final position of manipulated object
+            required_dims=self.env._get_pos_objects().shape[0]#in the current state of metaworld, this will either be 3 (for one object) or 6 (two objects)
+            self.bd_extractor=BehaviorDescr.GenericBD(dims=required_dims,num=1)#final position of manipulated objects
         else:
             raise Exception("Unkown bd type")
         self.dist_thresh=0.001 #to avoid adding everyone and their mother to the archive (manually fixed but according to the dimensions of behavior space)
@@ -159,7 +160,12 @@ class MetaWorldMT1(Problem):
         dct["behavior_descriptor_t"]=self.bd_type
         dct["task_id"]=self.task_id
         #dct["global_seed"]=seed_ 
-        dct["problem constant"]=(self.env.goal, self.env.obj_init_pos,self.env.obj_init_angle)
+        problem_consts={}
+        attrs=["goal","obj_init_pos", "obj_init_angle"]
+        for att in attrs:
+            if hasattr(self.env, att):
+                problem_consts[att]=getattr(self.env,att)
+        dct["problem constant"]=problem_consts
         dct["name"]=self.ML1_env_name
 
         return dct
@@ -300,7 +306,7 @@ class MetaWorldMT1(Problem):
         return fitness, bd, task_solved, complete_traj, init_state, init_obs, first_action
     
 
-    def visualise_bds(self,archive, population, quitely=True, save_to=""):
+    def visualise_bds(self,archive, population, quitely=True, save_to="", generation_num=-1, object_id=0):
         """
         """
         if not quitely and self.display:
@@ -331,7 +337,8 @@ class MetaWorldMT1(Problem):
         if not quitely:
             plt.show()
         else:
-            plt.savefig(save_to+f"/gen_{self.num_saved}.png")
+            gen_num=generation_num if generation_num!=-1 else self.num_saved
+            plt.savefig(save_to+f"/gen_{gen_num}.png")
             self.num_saved+=1
 
         fig.clf()
@@ -350,7 +357,9 @@ if __name__=="__main__":
 
     if TEST_BEST_AG_FROM_SAVED_POPULATION:
 
-        pop_path="/home/achkan/Desktop//NS_log_TC8FE2XvSR_63821/population_gen_386"
+        #pop_path="/home/achkan/Desktop//NS_log_TC8FE2XvSR_63821/population_gen_386"
+        pop_path="/tmp/NS_log_rWVZbcDhUp_97381/population_gen_0"
+
         #pop_path="/tmp//NS_log_TC8FE2XvSR_71671/population_gen_3"
 
 

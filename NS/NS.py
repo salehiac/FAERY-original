@@ -250,7 +250,8 @@ class NoveltySearch:
                         self.archive.dump(self.log_dir_path+f"/archive_{it}")
                 
                 if len(task_solvers): 
-                  self.visualise_bds(parents + [x for x in offsprings if x._solved_task])
+                  self.visualise_bds(parents + [x for x in offsprings if x._solved_task],generation_num=it)
+                  MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) 
                 
                 #for ag in parents:
                 #    ag._sum_of_model_params=MiscUtils.get_sum_of_model_params(ag)
@@ -259,7 +260,6 @@ class NoveltySearch:
                 #    if ag not in parents:
                 #        ag.mds=None#to save RAM
 
-                #MiscUtils.dump_pickle(self.log_dir_path+f"/population_gen_{it}",parents) 
                 
                 if len(task_solvers):
                     print(colored("[NS info] found task solvers (generation "+str(it)+")","magenta",attrs=["bold"]),flush=True)
@@ -297,12 +297,12 @@ class NoveltySearch:
        
         return mutated_ags
     
-    def visualise_bds(self, agents):
+    def visualise_bds(self, agents,generation_num=-1):
          
         if self.visualise_bds_flag!=NoveltySearch.BD_VIS_DISABLE:# and it%10==0:
             q_flag=True if self.visualise_bds_flag==NoveltySearch.BD_VIS_TO_FILE else False
             archive_it=iter(self.archive) if self.archive is not None else []
-            self.problem.visualise_bds(archive_it, agents, quitely=q_flag, save_to=self.log_dir_path )
+            self.problem.visualise_bds(archive_it, agents, quitely=q_flag, save_to=self.log_dir_path ,generation_num=generation_num)
 
 
 if __name__=="__main__":
@@ -347,7 +347,7 @@ if __name__=="__main__":
             import MetaworldProblems
             problem=MetaworldProblems.MetaWorldMT1(bd_type=config["problem"]["bd_type"],
                     max_steps=-1, 
-                    display=False,#don't set it to True with scoop
+                    display=False,#ATTENTION: don't set it to True with scoop
                     assets={}, 
                     ML1_env_name=config["problem"]["env_conf"][0],
                     mode=config["problem"]["env_conf"][1])
