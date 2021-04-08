@@ -325,7 +325,7 @@ class MetaQDForSparseRewards:
                 ind._adaptation_speed_lst=[]
 
            
-            if outer_g%10==0 and not disable_testing:
+            if outer_g and outer_g%10==0 and not disable_testing:
                 
                 test_evolution_table=-1*np.ones([self.pop_sz, self.num_test_samples])
                 idx_to_row_test={self.pop[i]._idx:i for i in range(len(self.pop))}
@@ -444,8 +444,8 @@ if __name__=="__main__":
 
     if TRAIN_METAWORLD_ML1:
         
-        num_train_samples=10
-        num_test_samples=10
+        num_train_samples=50
+        num_test_samples=40
 
         task_name="pick-place-v2"   #1st and 3rd experiments
         #task_name="basketball-v2"  #2nd experiment
@@ -464,8 +464,8 @@ if __name__=="__main__":
                 task_name=task_name,
                 tmp_dir=None)
         
-        algo=MetaQDForSparseRewards(pop_sz=28,
-                off_sz=28,
+        algo=MetaQDForSparseRewards(pop_sz=130,
+                off_sz=130,
                 G_outer=300,
                 G_inner=800,
                 train_sampler=train_sampler,
