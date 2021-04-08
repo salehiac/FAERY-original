@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import copy
 import functools
 import random
+import json
 #import pdb
 
 import numpy as np
@@ -131,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS/",
+            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_soccer/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -447,9 +448,8 @@ if __name__=="__main__":
         num_train_samples=50
         num_test_samples=40
 
-        task_name="pick-place-v2"   #1st and 3rd experiments
-        #task_name="basketball-v2"  #2nd experiment
-        #task_name="shelf-place-v2" #crashed
+        #task_name="pick-place-v2"   
+        task_name="soccer-v2"
         behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
         train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
@@ -474,6 +474,16 @@ if __name__=="__main__":
                 num_test_samples=num_test_samples,
                 agent_factory=_make_metaworld_ml1_ag,
                 top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS/")
+
+        experiment_config={"pop_sz":algo.pop_sz,
+            "off_sz":algo.off_sz, 
+            "num_train_samples":num_train_samples,
+            "num_test_samples":num_test_samples,
+            "task_name":task_name}
+
+        with open(algo.top_level_log+"/experiment_config","w") as fl:
+          json.dump(experiment_config,fl)
+
 
         algo()
 
