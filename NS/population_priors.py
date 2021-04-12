@@ -227,13 +227,13 @@ class MetaQDForSparseRewards:
         else:
             print("resuming from gen :",resume_from_gen["gen"])
             initial_pop=resume_from_gen["init_pop"]
-            assert len(init_pop)==pop_sz, "wrong initial popluation size"
+            assert len(initial_pop)==pop_sz, "wrong initial popluation size"
             for x_i in range(pop_sz):
-                init_pop[x_i].reset_tracking_attrs()
-                init_pop[x_i]._idx=x_i
-                init_pop[x_i]._parent_idx=-1
-                init_pop[x_i]._root=init_pop[x_i]._idx
-                init_pop[x_i]._created_at_gen=-1
+                initial_pop[x_i].reset_tracking_attrs()
+                initial_pop[x_i]._idx=x_i
+                initial_pop[x_i]._parent_idx=-1
+                initial_pop[x_i]._root=initial_pop[x_i]._idx
+                initial_pop[x_i]._created_at_gen=-1
             self.starting_gen=resume_from_gen["gen"]+1
 
 
