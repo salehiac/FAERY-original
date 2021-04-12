@@ -518,8 +518,9 @@ class NSGA2:
     wrapper around deap's selNSGA2
     """
     def __init__(self, k):
-        deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
-        deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
+        #Deap is garbage and it sometimes creates problems with parallelism if those are not called in the __main__ script... Pffff.
+        #deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
+        #deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
 
         self.k=k
         

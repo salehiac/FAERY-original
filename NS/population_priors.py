@@ -6,7 +6,7 @@ import copy
 import functools
 import random
 import json
-#import pdb
+import pdb
 
 import numpy as np
 import torch
@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_soccer/",
+            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_pick_place/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -181,7 +181,8 @@ class MetaQDForSparseRewards:
             num_train_samples,
             num_test_samples,
             agent_factory,
-            top_level_log_root="//scratchbeta/salehia/mqd_tmp//"):
+            top_level_log_root="//scratchbeta/salehia/mqd_tmp//",
+            resume_from_gen={}):
         """
         Note: unlike many meta algorithms, the improvements of the outer loop are not based on test data, but on meta observations from the inner loop. So the
         test_sampler here is used for the evaluation of the meta algorithm, not for learning.
@@ -195,6 +196,7 @@ class MetaQDForSparseRewards:
         num_test_samples     int          number of environments to use at each outer_loop generation for testing
         agent_factory        function     either _make_2d_maze_ag or _make_metaworld_ml1_ag
         top_level_log_root   str          where to save the population after each top_level optimisation
+        resume_from_gen      dict         If not empty, then should be of the form {"gen":some_int, "init_pop":[list of agents]} such that the agent match with agent_factory
         """
 
         self.pop_sz=pop_sz
@@ -218,19 +220,31 @@ class MetaQDForSparseRewards:
         self.mutator=functools.partial(deap_tools.mutPolynomialBounded,eta=10, low=-1.0, up=1.0, indpb=0.1)
 
         ###NOTE: if at some point you add the possibility of resuming from an already given pop, don't forget to rest their _useful_evolvability etc to 0/infinity whatever
-        initial_pop=[self.agent_factory(i) for i in range(pop_sz)]
-        initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, self.agent_factory)
+        if not len(resume_from_gen):
+            initial_pop=[self.agent_factory(i) for i in range(pop_sz)]
+            initial_pop=_mutate_initial_prior_pop(initial_pop,self.mutator, self.agent_factory)
+            self.starting_gen=0
+        else:
+            print("resuming from gen :",resume_from_gen["gen"])
+            initial_pop=resume_from_gen["init_pop"]
+            assert len(init_pop)==pop_sz, "wrong initial popluation size"
+            for x_i in range(pop_sz):
+                init_pop[x_i].reset_tracking_attrs()
+                init_pop[x_i]._idx=x_i
+                init_pop[x_i]._parent_idx=-1
+                init_pop[x_i]._root=init_pop[x_i]._idx
+                init_pop[x_i]._created_at_gen=-1
+            self.starting_gen=resume_from_gen["gen"]+1
+
+
+        
         self.num_total_agents=pop_sz#total number of generated agents from now on (including discarded agents)
 
         self.pop=initial_pop
 
         self.inner_selector=functools.partial(MiscUtils.selBest,k=2*pop_sz,automatic_threshold=False)
 
-        #deap setups
-        deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
-        deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
-
-
+        
         self.evolution_tables_train=[]
         self.evolution_tables_test=[]
       
@@ -315,9 +329,9 @@ class MetaQDForSparseRewards:
             #print("_mean_adaptation_speed POP \n",display_f1)
             #print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
             
-            with open(self.top_level_log+"/population_prior_"+str(outer_g),"wb") as fl:
+            with open(self.top_level_log+"/population_prior_"+str(outer_g+self.starting_gen),"wb") as fl:
                 pickle.dump(self.pop, fl)
-            np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g), self.evolution_tables_train[-1])
+            np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g+self.starting_gen), self.evolution_tables_train[-1])
             
             #reset evolvbility and adaptation stats
             for ind in self.pop:
@@ -346,7 +360,7 @@ class MetaQDForSparseRewards:
                     test_evolution_table[idx_to_row_test[rt], pb_t]=d_t
 
                 self.evolution_tables_test.append(test_evolution_table)
-                np.savez_compressed(self.top_level_log+"/evolution_table_test_"+str(outer_g), self.evolution_tables_test[-1])
+                np.savez_compressed(self.top_level_log+"/evolution_table_test_"+str(outer_g+self.starting_gen), self.evolution_tables_test[-1])
 
     def test_population(self,
         population,
@@ -401,6 +415,11 @@ if __name__=="__main__":
 
     TRAIN_WITH_RANDOM_2D_MAZES=False
     TRAIN_METAWORLD_ML1=True
+
+    #seems to create problems when not called in global scope, so, yeah.
+    deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
+    deap.creator.create("LightIndividuals",list,fitness=deap.creator.Fitness2d, ind_i=-1)
+
     
     if TRAIN_WITH_RANDOM_2D_MAZES:
 
@@ -444,50 +463,73 @@ if __name__=="__main__":
         algo()
 
     if TRAIN_METAWORLD_ML1:
-        
-        num_train_samples=50
-        num_test_samples=40
 
-        #task_name="pick-place-v2"   
-        task_name="soccer-v2"
-        behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
+        parser = argparse.ArgumentParser(description='meta experiments')
+        parser.add_argument('--resume', type=str,  help="path to a file population_prior_i with i a generation number", default="")
+        args = parser.parse_args()
 
-        train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
-                bd_type=behavior_descr_type,
-                mode="train",
-                task_name=task_name,
-                tmp_dir=None)
-        
-        test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
-                bd_type=behavior_descr_type,
-                mode="test",
-                task_name=task_name,
-                tmp_dir=None)
-        
-        algo=MetaQDForSparseRewards(pop_sz=130,
-                off_sz=130,
-                G_outer=300,
-                G_inner=800,
-                train_sampler=train_sampler,
-                test_sampler=test_sampler,
-                num_train_samples=num_train_samples,
-                num_test_samples=num_test_samples,
-                agent_factory=_make_metaworld_ml1_ag,
-                top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS/")
+        resume_dict={}
+        if len(args.resume):
+            print("resuming...")
+            pop_fn=args.resume
+            with open(pop_fn,"rb") as fl:
+                resume_dict["init_pop"]=pickle.load(fl)
+            dig=[x for x in pop_fn[pop_fn.find("population_prior"):] if x.isdigit()]
+            dig=int(functools.reduce(lambda x,y: x+y, dig,""))
+            resume_dict["gen"]=dig
+            print("loaded_init_pop...")
 
-        experiment_config={"pop_sz":algo.pop_sz,
-            "off_sz":algo.off_sz, 
-            "num_train_samples":num_train_samples,
-            "num_test_samples":num_test_samples,
-            "task_name":task_name}
+        if 1:
+            num_train_samples=50
+            num_test_samples=40
 
-        with open(algo.top_level_log+"/experiment_config","w") as fl:
-          json.dump(experiment_config,fl)
+            task_name="pick-place-v2" 
+            #task_name="soccer-v2"      #Success!
+            #task_name="sweep-v2"       #In progress
+            #task_name="window-open-v2"       #Not launched yet
+            #task_name="assembly-v2" #doesn't work
+            #task_name="basketball-v2"
+            behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
+
+            train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
+                    bd_type=behavior_descr_type,
+                    mode="train",
+                    task_name=task_name,
+                    tmp_dir=None)
+            
+            test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
+                    bd_type=behavior_descr_type,
+                    mode="test",
+                    task_name=task_name,
+                    tmp_dir=None)
+
+            
+            
+            algo=MetaQDForSparseRewards(pop_sz=130,
+                    off_sz=130,
+                    G_outer=300,
+                    G_inner=800,
+                    train_sampler=train_sampler,
+                    test_sampler=test_sampler,
+                    num_train_samples=num_train_samples,
+                    num_test_samples=num_test_samples,
+                    agent_factory=_make_metaworld_ml1_ag,
+                    top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS/",
+                    resume_from_gen=resume_dict)
+
+            experiment_config={"pop_sz":algo.pop_sz,
+                "off_sz":algo.off_sz, 
+                "num_train_samples":num_train_samples,
+                "num_test_samples":num_test_samples,
+                "task_name":task_name}
+
+            with open(algo.top_level_log+"/experiment_config","w") as fl:
+              json.dump(experiment_config,fl)
 
 
-        algo()
+            algo()
 
-        print("ended algo")
+            print("ended algo")
 
 
 

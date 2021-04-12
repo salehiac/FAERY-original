@@ -61,6 +61,32 @@ class Agent(ABC):
         self._last_eval_init_state=None
         self._first_action=None
 
+    def reset_tracking_attrs(self):
+        self._fitness=None
+        self._behavior_descr=None
+        self._complete_trajs=None#for debug and visualisation only
+        self._nov=None
+
+        self._solved_task=False
+        self._task_info={}
+        self._created_at_gen=-1 
+        self._parent_idx=-1
+        self._root=-1
+        self._bd_dist_to_parent_bd=-1
+        self._age=-1
+
+        self._useful_evolvability=0
+        self._mean_adaptation_speed=float("inf")
+        self._adaptation_speed_lst=[]
+
+        self._sum_of_model_params=None #for debug
+
+        self._last_eval_init_state=None
+        self._first_action=None
+
+
+
+
 
 
 
