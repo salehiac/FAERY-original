@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_pick_place/",
+            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_box_close/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -480,15 +480,16 @@ if __name__=="__main__":
             print("loaded_init_pop...")
 
         if 1:
-            num_train_samples=50
-            num_test_samples=40
+            num_train_samples=30
+            num_test_samples=25
 
-            task_name="pick-place-v2" 
+            #task_name="pick-place-v2" 
             #task_name="soccer-v2"      #Success!
             #task_name="sweep-v2"       #In progress
             #task_name="window-open-v2"       #Not launched yet
             #task_name="assembly-v2" #doesn't work
             #task_name="basketball-v2"
+            task_name="box-close-v2"
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
             train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
@@ -508,7 +509,7 @@ if __name__=="__main__":
             algo=MetaQDForSparseRewards(pop_sz=130,
                     off_sz=130,
                     G_outer=300,
-                    G_inner=800,
+                    G_inner=700,
                     train_sampler=train_sampler,
                     test_sampler=test_sampler,
                     num_train_samples=num_train_samples,
