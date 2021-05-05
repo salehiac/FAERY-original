@@ -48,7 +48,7 @@ def sample_from_ml1_single_task(bd_type="type_3",num_samples=-1,mode="train",tas
     #print("num_samples==",num_samples)
    
     for s_i in range(num_samples):
-        mt1_i=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML1_env_name=task_name, mode=mode, task_id=-1)
+        mt1_i=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML_env_name=task_name, mode=mode, task_id=-1)
         samples.append(mt1_i)
 
     np.random.shuffle(samples)
@@ -60,8 +60,14 @@ def sample_from_ml1_single_task(bd_type="type_3",num_samples=-1,mode="train",tas
 
     return samples
  
-
-
+def sample_single_example_from_ml10(ml10_object,bd_type="type_3",num_samples=1,mode="train",tmp_dir="/tmp/meta_test/"):
+    """
+    num_samples is here for retrocompatibility, it is unused
+    """
+    task_name=str(np.random.choice(list(ml10_object.train_classes.keys()))) if mode=="train" else str(np.random.choice(list(ml10_object.test_classes.keys())))
+    sample=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML_env_name=task_name, mode=mode, task_id=-1,ML10_obj=ml10_object)
+    
+    return [sample]
 
 class MetaWorldMT1(Problem):
     """
@@ -81,7 +87,7 @@ class MetaWorldMT1(Problem):
 
     So, the 4d action space just corresponds to positions and gripper action.
     """
-    def __init__(self, bd_type="type_1", max_steps=-1, display=False, assets={}, ML1_env_name="pick-place-v2", mode="train", task_id=-1):
+    def __init__(self, bd_type="type_1", max_steps=-1, display=False, assets={}, ML_env_name="pick-place-v2", mode="train", task_id=-1, ML10_obj=None):
         """
         bd_type        The idea is that it fosters exploration related to the task, for now it doesn't matter if it isn't 
                        optimal. Currently those types are available: (noting N the number of samples)
@@ -99,35 +105,48 @@ class MetaWorldMT1(Problem):
                        api compatibility.
         display        self explanatory
         assets         ignored, here for api compatibility issues.
-        ML1_env_name   str, should be one of the strings in metaworld.ML1.ENV_NAMES
+        ML_env_name    str, should be one of the strings in metaworld.ML1.ENV_NAMES
         mode           "train" or "test"
         task_id        int. If -1, randomly samples tasks (goal positions), which is what you usually want for normal training/testing.
                             If task_id!=-1, forces the use of the task with the given task_id. That can be useful for visualisation and debug.
+
+        ML10_obj       if None, ML1 is used, otherwise, it should be ML10_obj should be what metaworld.ML10() returns, in which case it will be used to create an env
+                       of name ML_env_name with a random task.
         """
         super().__init__()
 
-        self.ML1_env_name=ML1_env_name
-        self.ml1 = metaworld.ML1(self.ML1_env_name) #constructs the benchmark which is an environment. As this is ML1, only the task (e.g. the goal)
-                                          #will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
-                                          #So ml1.train_classes is going to be of lenght 1
-        
+        self.ML_env_name=ML_env_name
         self.mode=mode
-
        
-        #print("TASK_ID==",task_id)
-        if self.mode=="train":
-            self.env = self.ml1.train_classes[self.ML1_env_name]()  
-            self.task_id = np.random.randint(len(self.ml1.train_tasks)) if task_id==-1 else task_id
-            self.task=self.ml1.train_tasks[self.task_id]#changes goal
-            self.env.set_task(self.task)  # Set task
-        if self.mode=="test":
-            self.env = self.ml1.test_classes[self.ML1_env_name]()  
-            self.task_id = np.random.randint(len(self.ml1.test_tasks)) if task_id==-1 else task_id
-            self.task=self.ml1.test_tasks[self.task_id]#changes goal
-            self.env.set_task(self.task)  # Set task
-
-        #self.env.seed(seed_)
-        #self.env.random_init=False #this doesnt' work, it is automatically set to True again in metaworld
+        if ML10_obj is None:
+            #note: this is time-consuming, you should probably call that once for all environments, just like you do for ml10
+            self.ml1 = metaworld.ML1(self.ML_env_name) #constructs the benchmark which is an environment. As this is ML1, only the task (e.g. the goal)
+                                                       #will vary (note that in for example pick and place, the initial configuratino of the object varies, not the goal).
+                                                       #So ml1.train_classes is going to be of lenght 1
+            
+       
+            if self.mode=="train":
+                self.env = self.ml1.train_classes[self.ML_env_name]()  
+                self.task_id = np.random.randint(len(self.ml1.train_tasks)) if task_id==-1 else task_id
+                self.task=self.ml1.train_tasks[self.task_id]#changes goal
+                self.env.set_task(self.task)  # Set task
+            if self.mode=="test":
+                self.env = self.ml1.test_classes[self.ML_env_name]()  
+                self.task_id = np.random.randint(len(self.ml1.test_tasks)) if task_id==-1 else task_id
+                self.task=self.ml1.test_tasks[self.task_id]#changes goal
+                self.env.set_task(self.task)  # Set task
+        else:
+            self.ml10=ML10_obj
+            if self.mode=="train":
+                self.env=self.ml10.train_classes[self.ML_env_name]()
+                self.task=random.choice([task for task in self.ml10.train_tasks if task.env_name == self.ML_env_name])
+                self.task_id = self.ml10.train_tasks.index(self.task)
+                self.env.set_task(self.task)  # Set task
+            if self.mode=="test":
+                self.env = self.ml10.test_classes[self.ML_env_name]()  
+                self.task=random.choice([task for task in self.ml10.test_tasks if task.env_name == self.ML_env_name])
+                self.task_id = self.ml10.test_tasks.index(self.task)
+                self.env.set_task(self.task)  # Set task
 
 
         self.dim_obs=self.env.observation_space.shape[0]#in the latest versions of metaworld, it is 39
@@ -166,7 +185,7 @@ class MetaWorldMT1(Problem):
             if hasattr(self.env, att):
                 problem_consts[att]=getattr(self.env,att)
         dct["problem constant"]=problem_consts
-        dct["name"]=self.ML1_env_name
+        dct["name"]=self.ML_env_name
 
         return dct
 
@@ -285,7 +304,6 @@ class MetaWorldMT1(Problem):
                     #print("stuck. ending episode.")
                     task_solved=False
                     done=True
-                    reward-=1
                     
                 fitness+=reward
                 if info["success"]:
@@ -350,8 +368,8 @@ class MetaWorldMT1(Problem):
 
 if __name__=="__main__":
 
-    TEST_BEST_AG_FROM_SAVED_POPULATION=True
-    TEST_SAMPLER=False
+    TEST_BEST_AG_FROM_SAVED_POPULATION=False
+    TEST_SAMPLERS=True
 
 
 
@@ -392,7 +410,7 @@ if __name__=="__main__":
                 max_steps=-1, 
                 display=True, 
                 assets={}, 
-                ML1_env_name=population[best_ag_id]._task_info["name"],
+                ML_env_name=population[best_ag_id]._task_info["name"],
                 mode=train_or_test,
                 task_id=tsk_id)
         print(colored(f"task_info (created env): {mtw_mt1.get_task_info()}","red"))
@@ -410,8 +428,15 @@ if __name__=="__main__":
             fit, beh_desr, is_solved, _ ,_, the_init_obs, _=mtw_mt1(population[best_ag_id],forced_init_state=start_from_state,forced_init_obs=start_from_obs)
             print(f"fitness=={fit}, beh_desr.shape=={beh_desr.shape}, is_solved=={is_solved}")
 
-    if TEST_SAMPLER:
+    if TEST_SAMPLERS:
 
-        print("hello")
+        print("sampling ML1")
         sample_envs=sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/")
+        print("done")
+        print("sampling ML10")
+        print("constructing ML10 env")
+        ml10obj=metaworld.ML10()
+        print("sampling")
+        sample=sample_single_example_from_ml10(ml10obj,bd_type="type_3",num_samples=1,mode="train",tmp_dir="/tmp/meta_test/")
+
 

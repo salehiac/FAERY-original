@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_box_close/",
+            logs_root="/tmp/NS_LOGS/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -414,7 +414,8 @@ class MetaQDForSparseRewards:
 if __name__=="__main__":
 
     TRAIN_WITH_RANDOM_2D_MAZES=False
-    TRAIN_METAWORLD_ML1=True
+    TRAIN_METAWORLD_ML1=False
+    TRAIN_METAWORLD_ML10=True
 
     #seems to create problems when not called in global scope, so, yeah.
     deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
@@ -531,14 +532,76 @@ if __name__=="__main__":
             algo()
 
             print("ended algo")
+            
+            
+    if TRAIN_METAWORLD_ML10:
+
+        import metaworld
+
+        parser = argparse.ArgumentParser(description='meta experiments')
+        parser.add_argument('--resume', type=str,  help="path to a file population_prior_i with i a generation number", default="")
+        args = parser.parse_args()
+
+        resume_dict={}
+        if len(args.resume):
+            print("resuming...")
+            pop_fn=args.resume
+            with open(pop_fn,"rb") as fl:
+                resume_dict["init_pop"]=pickle.load(fl)
+            dig=[x for x in pop_fn[pop_fn.find("population_prior"):] if x.isdigit()]
+            dig=int(functools.reduce(lambda x,y: x+y, dig,""))
+            resume_dict["gen"]=dig
+            print("loaded_init_pop...")
+
+        if 1:
+            num_train_samples=10
+            num_test_samples=10
+
+            behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
+            ml10obj=metaworld.ML10()
+            
+            
+            train_sampler=functools.partial(MetaworldProblems.sample_single_example_from_ml10,
+                    ml10_object=ml10obj,
+                    bd_type=behavior_descr_type,
+                    mode="train",
+                    tmp_dir=None)
+            
+            test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
+                    ml10_object=ml10obj,
+                    bd_type=behavior_descr_type,
+                    mode="test",
+                    tmp_dir=None)
+
+           
+            g_outer=300
+            g_inner=550
+            algo=MetaQDForSparseRewards(pop_sz=30,
+                    off_sz=30,
+                    G_outer=g_outer,
+                    G_inner=g_inner,
+                    train_sampler=train_sampler,
+                    test_sampler=test_sampler,
+                    num_train_samples=num_train_samples,
+                    num_test_samples=num_test_samples,
+                    agent_factory=_make_metaworld_ml1_ag,
+                    top_level_log_root="/tmp/META_LOGS/",
+                    resume_from_gen=resume_dict)
+
+            experiment_config={"pop_sz":algo.pop_sz,
+                    "off_sz":algo.off_sz, 
+                    "num_train_samples":num_train_samples,
+                    "num_test_samples":num_test_samples,
+                    "G_outer":g_outer,
+                    "G_inner":g_inner}
+
+            with open(algo.top_level_log+"/experiment_config","w") as fl:
+              json.dump(experiment_config,fl)
 
 
+            algo()
 
-
-
-
-
-
+            print("ended algo")
 
 
 
