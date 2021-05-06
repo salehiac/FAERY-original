@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/tmp/NS_LOGS/",
+            logs_root="//scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_ML10_3/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -259,6 +259,7 @@ class MetaQDForSparseRewards:
 
 
         disable_testing=False
+        test_first=False
 
         for outer_g in range(self.G_outer):
 
@@ -278,73 +279,83 @@ class MetaQDForSparseRewards:
             evolution_table=-1*np.ones([len(tmp_pop), self.num_train_samples]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
             idx_to_row={tmp_pop[i]._idx:i for i in range(len(tmp_pop))}
 
-            metadata=list(futures.map(ns_instance,
-                [self.train_sampler for i in range(self.num_train_samples)],
-                [[x for x in tmp_pop] for i in range(self.num_train_samples)],#population
-                [self.mutator for i in range(self.num_train_samples)],#mutator
-                [self.inner_selector for i in range(self.num_train_samples)],#inner_selector
-                [self.agent_factory for i in range(self.num_train_samples)],#make_ag
-                [self.G_inner for i in range(self.num_train_samples)]))#G_inner
+            ml10obj=metaworld.ML10()#I'm not sure if it's enough to call it only once per application, so let's be paranoid
+            
+            if not test_first:
 
-            roots_lst=[m[0] for m in metadata]
-            depth_lst=[m[1] for m in metadata]
+                self.train_sampler.set_ml10obj(ml10obj)
+
+                metadata=list(futures.map(ns_instance,
+                    [self.train_sampler for i in range(self.num_train_samples)],
+                    [[x for x in tmp_pop] for i in range(self.num_train_samples)],#population
+                    [self.mutator for i in range(self.num_train_samples)],#mutator
+                    [self.inner_selector for i in range(self.num_train_samples)],#inner_selector
+                    [self.agent_factory for i in range(self.num_train_samples)],#make_ag
+                    [self.G_inner for i in range(self.num_train_samples)]))#G_inner
+
+                roots_lst=[m[0] for m in metadata]
+                depth_lst=[m[1] for m in metadata]
   
-            idx_to_individual={x._idx:x for x in tmp_pop}
+                idx_to_individual={x._idx:x for x in tmp_pop}
 
-            for pb_i in range(self.num_train_samples):
-              rt_i=roots_lst[pb_i]
-              d_i=depth_lst[pb_i]
-              for rt in rt_i:
-                idx_to_individual[rt]._useful_evolvability+=1
-                idx_to_individual[rt]._adaptation_speed_lst.append(d_i)
-                evolution_table[idx_to_row[rt], pb_i]=d_i
+                for pb_i in range(self.num_train_samples):
+                  rt_i=roots_lst[pb_i]
+                  d_i=depth_lst[pb_i]
+                  for rt in rt_i:
+                    idx_to_individual[rt]._useful_evolvability+=1
+                    idx_to_individual[rt]._adaptation_speed_lst.append(d_i)
+                    evolution_table[idx_to_row[rt], pb_i]=d_i
 
 
-            self.evolution_tables_train.append(evolution_table)
-            for ind in tmp_pop:
-                if len(ind._adaptation_speed_lst):
-                    ind._mean_adaptation_speed=np.mean(ind._adaptation_speed_lst)
-            
-            #display_f0=[x._useful_evolvability for x in tmp_pop]
-            #display_f1=[x._mean_adaptation_speed for x in tmp_pop]
-            #print("_useful_evolvability TMP_POP \n",display_f0)
-            #print("_mean_adaptation_speed TMP_POP\n",display_f1)
-            #print("================================================================================")
-             
-            #now the meta training part
-            light_pop=[]
-            for i in range(len(tmp_pop)):
-                light_pop.append(deap.creator.LightIndividuals())
-                light_pop[-1].fitness.setValues([tmp_pop[i]._useful_evolvability, -1*(tmp_pop[i]._mean_adaptation_speed)])#the -1 factor is because we want to minimise that speed
-                light_pop[-1].ind_i=i
+                self.evolution_tables_train.append(evolution_table)
+                for ind in tmp_pop:
+                    if len(ind._adaptation_speed_lst):
+                        ind._mean_adaptation_speed=np.mean(ind._adaptation_speed_lst)
+                
+                #display_f0=[x._useful_evolvability for x in tmp_pop]
+                #display_f1=[x._mean_adaptation_speed for x in tmp_pop]
+                #print("_useful_evolvability TMP_POP \n",display_f0)
+                #print("_mean_adaptation_speed TMP_POP\n",display_f1)
+                #print("================================================================================")
+                 
+                #now the meta training part
+                light_pop=[]
+                for i in range(len(tmp_pop)):
+                    light_pop.append(deap.creator.LightIndividuals())
+                    light_pop[-1].fitness.setValues([tmp_pop[i]._useful_evolvability, -1*(tmp_pop[i]._mean_adaptation_speed)])#the -1 factor is because we want to minimise that speed
+                    light_pop[-1].ind_i=i
 
-            chosen=deap.tools.selNSGA2(light_pop, self.pop_sz, nd="standard")
-            chosen_inds=[x.ind_i for x in chosen]
+                chosen=deap.tools.selNSGA2(light_pop, self.pop_sz, nd="standard")
+                chosen_inds=[x.ind_i for x in chosen]
 
-            self.pop=[tmp_pop[u] for u in chosen_inds]
-            
-            #display_f0=[x._useful_evolvability for x in self.pop]
-            #display_f1=[x._mean_adaptation_speed for x in self.pop]
-            #print("_useful_evolvability POP \n",display_f0)
-            #print("_mean_adaptation_speed POP \n",display_f1)
-            #print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-            
-            with open(self.top_level_log+"/population_prior_"+str(outer_g+self.starting_gen),"wb") as fl:
-                pickle.dump(self.pop, fl)
-            np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g+self.starting_gen), self.evolution_tables_train[-1])
-            
-            #reset evolvbility and adaptation stats
-            for ind in self.pop:
-                ind._useful_evolvability=0
-                ind._mean_adaptation_speed=float("inf")
-                ind._adaptation_speed_lst=[]
+                self.pop=[tmp_pop[u] for u in chosen_inds]
+                
+                #display_f0=[x._useful_evolvability for x in self.pop]
+                #display_f1=[x._mean_adaptation_speed for x in self.pop]
+                #print("_useful_evolvability POP \n",display_f0)
+                #print("_mean_adaptation_speed POP \n",display_f1)
+                #print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                
+                with open(self.top_level_log+"/population_prior_"+str(outer_g+self.starting_gen),"wb") as fl:
+                    pickle.dump(self.pop, fl)
+                np.savez_compressed(self.top_level_log+"/evolution_table_train_"+str(outer_g+self.starting_gen), self.evolution_tables_train[-1])
+                
+                #reset evolvbility and adaptation stats
+                for ind in self.pop:
+                    ind._useful_evolvability=0
+                    ind._mean_adaptation_speed=float("inf")
+                    ind._adaptation_speed_lst=[]
 
            
-            if outer_g and outer_g%10==0 and not disable_testing:
+            #if outer_g and outer_g%10==0 and not disable_testing:
+            if outer_g%10==0 and not disable_testing:
+
+                test_first=False
                 
                 test_evolution_table=-1*np.ones([self.pop_sz, self.num_test_samples])
                 idx_to_row_test={self.pop[i]._idx:i for i in range(len(self.pop))}
-                
+               
+                self.test_sampler.set_ml10obj(ml10obj)
                 test_metadata=list(futures.map(ns_instance,
                     [self.test_sampler for i in range(self.num_test_samples)],
                     [[x for x in self.pop] for i in range(self.num_test_samples)],#population
@@ -482,7 +493,7 @@ if __name__=="__main__":
 
         if 1:
             num_train_samples=30
-            num_test_samples=25
+            num_test_samples=30
 
             #task_name="pick-place-v2" 
             #task_name="soccer-v2"      #Success!
@@ -554,30 +565,19 @@ if __name__=="__main__":
             print("loaded_init_pop...")
 
         if 1:
-            num_train_samples=10
-            num_test_samples=10
+            num_train_samples=35
+            num_test_samples=35
 
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
-            ml10obj=metaworld.ML10()
+            #ml10obj=metaworld.ML10() #let's be paranoid and call it every outer loop
             
-            
-            train_sampler=functools.partial(MetaworldProblems.sample_single_example_from_ml10,
-                    ml10_object=ml10obj,
-                    bd_type=behavior_descr_type,
-                    mode="train",
-                    tmp_dir=None)
-            
-            test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
-                    ml10_object=ml10obj,
-                    bd_type=behavior_descr_type,
-                    mode="test",
-                    tmp_dir=None)
-
+            train_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="train", tmp_dir=None)
+            test_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="test", tmp_dir=None)
            
             g_outer=300
             g_inner=550
-            algo=MetaQDForSparseRewards(pop_sz=30,
-                    off_sz=30,
+            algo=MetaQDForSparseRewards(pop_sz=60,
+                    off_sz=60,
                     G_outer=g_outer,
                     G_inner=g_inner,
                     train_sampler=train_sampler,
@@ -585,7 +585,7 @@ if __name__=="__main__":
                     num_train_samples=num_train_samples,
                     num_test_samples=num_test_samples,
                     agent_factory=_make_metaworld_ml1_ag,
-                    top_level_log_root="/tmp/META_LOGS/",
+                    top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS_ML10/",
                     resume_from_gen=resume_dict)
 
             experiment_config={"pop_sz":algo.pop_sz,
@@ -593,7 +593,8 @@ if __name__=="__main__":
                     "num_train_samples":num_train_samples,
                     "num_test_samples":num_test_samples,
                     "G_outer":g_outer,
-                    "G_inner":g_inner}
+                    "G_inner":g_inner,
+                    "ML10 called every outer loop":1}
 
             with open(algo.top_level_log+"/experiment_config","w") as fl:
               json.dump(experiment_config,fl)

@@ -59,13 +59,21 @@ def sample_from_ml1_single_task(bd_type="type_3",num_samples=-1,mode="train",tas
             print(x.env.goal, x.env.obj_init_pos, x.env.obj_init_angle)#for pick and place, only obj_init_pos seems to vary
 
     return samples
- 
-def sample_single_example_from_ml10(ml10_object,bd_type="type_3",num_samples=1,mode="train",tmp_dir="/tmp/meta_test/"):
-    """
-    num_samples is here for retrocompatibility, it is unused
-    """
-    task_name=str(np.random.choice(list(ml10_object.train_classes.keys()))) if mode=="train" else str(np.random.choice(list(ml10_object.test_classes.keys())))
-    sample=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML_env_name=task_name, mode=mode, task_id=-1,ML10_obj=ml10_object)
+
+class SampleSingleExampleFromML10:
+  def __init__(self,bd_type,mode, tmp_dir):
+    self.bd_type=bd_type
+    self.mode=mode
+    self.tmp_dir=tmp_dir
+    self._ml10obj=None
+  def set_ml10obj(self,ml10obj):
+    self._ml10obj=ml10obj
+  def __call__(self,num_samples):
+
+    task_name=str(np.random.choice(list(self._ml10obj.train_classes.keys()))) if self.mode=="train" else str(np.random.choice(list(self._ml10obj.test_classes.keys())))
+    sample=MetaWorldMT1(bd_type=self.bd_type, max_steps=-1, display=False, assets={}, ML_env_name=task_name, mode=self.mode, task_id=-1,ML10_obj=self._ml10obj)
+
+    print(task_name)
     
     return [sample]
 
