@@ -93,7 +93,7 @@ def _make_metaworld_ml1_ag(ag_idx):
     agt=Agents.SmallFC_FW(ag_idx,
             in_d=39,
             out_d=4,
-            num_hidden=2,
+            num_hidden=1,
             hidden_dim=50,
             output_normalisation="tanh")
     return agt
@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="//scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_ML10_3/",
+            logs_root="//scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_pick_place_from_basket/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -279,11 +279,14 @@ class MetaQDForSparseRewards:
             evolution_table=-1*np.ones([len(tmp_pop), self.num_train_samples]) #evolution_table[i,j]=k means that agent i solves env j after k mutations
             idx_to_row={tmp_pop[i]._idx:i for i in range(len(tmp_pop))}
 
-            ml10obj=metaworld.ML10()#I'm not sure if it's enough to call it only once per application, so let's be paranoid
+            if isinstance(self.train_sampler, MetaworldProblems.SampleSingleExampleFromML10):
+                ml10obj=metaworld.ML10()#I'm not sure if it's enough to call it only once per application, so let's be paranoid
             
             if not test_first:
 
-                self.train_sampler.set_ml10obj(ml10obj)
+                if isinstance(self.train_sampler, MetaworldProblems.SampleSingleExampleFromML10):
+
+                    self.train_sampler.set_ml10obj(ml10obj)
 
                 metadata=list(futures.map(ns_instance,
                     [self.train_sampler for i in range(self.num_train_samples)],
@@ -355,7 +358,9 @@ class MetaQDForSparseRewards:
                 test_evolution_table=-1*np.ones([self.pop_sz, self.num_test_samples])
                 idx_to_row_test={self.pop[i]._idx:i for i in range(len(self.pop))}
                
-                self.test_sampler.set_ml10obj(ml10obj)
+                if isinstance(self.test_sampler, MetaworldProblems.SampleSingleExampleFromML10):
+                    self.test_sampler.set_ml10obj(ml10obj)
+
                 test_metadata=list(futures.map(ns_instance,
                     [self.test_sampler for i in range(self.num_test_samples)],
                     [[x for x in self.pop] for i in range(self.num_test_samples)],#population
@@ -425,8 +430,8 @@ class MetaQDForSparseRewards:
 if __name__=="__main__":
 
     TRAIN_WITH_RANDOM_2D_MAZES=False
-    TRAIN_METAWORLD_ML1=False
-    TRAIN_METAWORLD_ML10=True
+    TRAIN_METAWORLD_ML1=True
+    TRAIN_METAWORLD_ML10=False
 
     #seems to create problems when not called in global scope, so, yeah.
     deap.creator.create("Fitness2d",deap.base.Fitness,weights=(1.0,1.0,))
@@ -492,8 +497,8 @@ if __name__=="__main__":
             print("loaded_init_pop...")
 
         if 1:
-            num_train_samples=30
-            num_test_samples=30
+            num_train_samples=45
+            num_test_samples=45
 
             #task_name="pick-place-v2" 
             #task_name="soccer-v2"      #Success!
@@ -501,7 +506,7 @@ if __name__=="__main__":
             #task_name="window-open-v2"       #Not launched yet
             #task_name="assembly-v2" #doesn't work
             #task_name="basketball-v2"
-            task_name="box-close-v2"
+            task_name="pick-place-v2"
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
             train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
@@ -517,24 +522,29 @@ if __name__=="__main__":
                     tmp_dir=None)
 
             
-            
-            algo=MetaQDForSparseRewards(pop_sz=130,
-                    off_sz=130,
-                    G_outer=300,
-                    G_inner=700,
+           
+            G_outer=100
+            G_inner=200
+            algo=MetaQDForSparseRewards(pop_sz=40,
+                    off_sz=40,
+                    G_outer=G_outer,
+                    G_inner=G_inner,
                     train_sampler=train_sampler,
                     test_sampler=test_sampler,
                     num_train_samples=num_train_samples,
                     num_test_samples=num_test_samples,
                     agent_factory=_make_metaworld_ml1_ag,
-                    top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS/",
+                    top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS_ML10/",
                     resume_from_gen=resume_dict)
 
             experiment_config={"pop_sz":algo.pop_sz,
                 "off_sz":algo.off_sz, 
                 "num_train_samples":num_train_samples,
                 "num_test_samples":num_test_samples,
-                "task_name":task_name}
+                "task_name":task_name,
+                "g_outer":G_outer,
+                "g_inner":G_inner,
+                "started_from_other_task":"basketball-v2-gen380"}
 
             with open(algo.top_level_log+"/experiment_config","w") as fl:
               json.dump(experiment_config,fl)
@@ -565,19 +575,18 @@ if __name__=="__main__":
             print("loaded_init_pop...")
 
         if 1:
-            num_train_samples=35
-            num_test_samples=35
+            num_train_samples=50
+            num_test_samples=50
 
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
-            #ml10obj=metaworld.ML10() #let's be paranoid and call it every outer loop
             
             train_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="train", tmp_dir=None)
             test_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="test", tmp_dir=None)
            
             g_outer=300
-            g_inner=550
-            algo=MetaQDForSparseRewards(pop_sz=60,
-                    off_sz=60,
+            g_inner=600
+            algo=MetaQDForSparseRewards(pop_sz=40,
+                    off_sz=40,
                     G_outer=g_outer,
                     G_inner=g_inner,
                     train_sampler=train_sampler,
