@@ -497,8 +497,8 @@ if __name__=="__main__":
             print("loaded_init_pop...")
 
         if 1:
-            num_train_samples=15
-            num_test_samples=15
+            num_train_samples=45
+            num_test_samples=45
 
             #task_name="pick-place-v2" 
             #task_name="soccer-v2"      #Success!
@@ -514,8 +514,8 @@ if __name__=="__main__":
            
             G_outer=100
             G_inner=500
-            algo=MetaQDForSparseRewards(pop_sz=10,
-                    off_sz=10,
+            algo=MetaQDForSparseRewards(pop_sz=40,
+                    off_sz=40,
                     G_outer=G_outer,
                     G_inner=G_inner,
                     train_sampler=train_sampler,
