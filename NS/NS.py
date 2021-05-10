@@ -136,9 +136,9 @@ class NoveltySearch:
         if os.path.isdir(logs_root):
             self.logs_root=logs_root
             self.log_dir_path=MiscUtils.create_directory_with_pid(dir_basename=logs_root+"/NS_log_"+MiscUtils.rand_string()+"_",remove_if_exists=True,no_pid=False)
-            if hasattr(self.problem,"ML_env_name"):
-                with open(self.log_dir_path+"/creation_notification.txt","a") as fl:
-                    fl.write("\n"+ self.problem.ML_env_name)
+            #if hasattr(self.problem,"ML_env_name"):
+            #    with open(self.log_dir_path+"/creation_notification.txt","a") as fl:
+            #        fl.write("\n"+ self.problem.ML_env_name)
             #print(colored("[NS info] NS log directory was created: "+self.log_dir_path, "green",attrs=["bold"]))
         else:
             raise Exception("Root dir for logs not found. Please ensure that it exists before launching the script.")

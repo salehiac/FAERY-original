@@ -36,23 +36,20 @@ import BehaviorDescr
 import MiscUtils
 from Problem import Problem
 
-def sample_from_ml1_single_task(bd_type="type_3",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/"):
+    
+class SampleFromML1:
+  def __init__(self, bd_type, mode, task_name):
+    self.bd_type=bd_type
+    self.mode=mode
+    self.task_name=task_name
 
-    ml1=metaworld.ML1(task_name)
-    num_possible_tasks=len(ml1.train_tasks) if mode=="train" else len(ml1.test_tasks)
-    #pdb.set_trace()
-    assert num_samples<=num_possible_tasks, "too many samples required" #is this reasonnable? There is nothing wrong from sampling the same env multiple times
-    if num_samples==-1:
-        num_samples=num_possible_tasks
-    samples=[]
-    #print("num_samples==",num_samples)
-   
-    for s_i in range(num_samples):
-        mt1_i=MetaWorldMT1(bd_type=bd_type, max_steps=-1, display=False, assets={}, ML_env_name=task_name, mode=mode, task_id=-1)
-        samples.append(mt1_i)
-
-    np.random.shuffle(samples)
-
+  def __call__(self,num_samples):
+    """
+    num_samples is here for historical reasons, but it's not longer used as we now always have num_samples==1 
+    """
+    
+    mt1_i=MetaWorldMT1(bd_type=self.bd_type, max_steps=-1, display=False, assets={}, ML_env_name=self.task_name, mode=self.mode, task_id=-1)
+    samples=[mt1_i]
     if 0:
         for x in samples:
             print("*********")
@@ -60,11 +57,11 @@ def sample_from_ml1_single_task(bd_type="type_3",num_samples=-1,mode="train",tas
 
     return samples
 
+
 class SampleSingleExampleFromML10:
-  def __init__(self,bd_type,mode, tmp_dir):
+  def __init__(self,bd_type,mode):
     self.bd_type=bd_type
     self.mode=mode
-    self.tmp_dir=tmp_dir
     self._ml10obj=None
   def set_ml10obj(self,ml10obj):
     self._ml10obj=ml10obj
@@ -439,12 +436,12 @@ if __name__=="__main__":
     if TEST_SAMPLERS:
 
         print("sampling ML1")
-        sample_envs=sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2",tmp_dir="/tmp/meta_test/")
+        sample_envs=sample_from_ml1_single_task(bd_type="type_1",num_samples=-1,mode="train",task_name="pick-place-v2")
         print("done")
         print("sampling ML10")
         print("constructing ML10 env")
         ml10obj=metaworld.ML10()
         print("sampling")
-        sample=sample_single_example_from_ml10(ml10obj,bd_type="type_3",num_samples=1,mode="train",tmp_dir="/tmp/meta_test/")
+        sample=sample_single_example_from_ml10(ml10obj,bd_type="type_3",num_samples=1,mode="train")
 
 
