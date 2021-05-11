@@ -22,6 +22,7 @@ for bn_name in metaworld.ML1.ENV_NAMES:
     print(bn_name)
     #bn_name="basketball-v2"
     #bn_name="pick-place-v2"
+    bn_name="hand-insert-v2"
 
     ml1 = metaworld.ML1(bn_name) #constructs the benchmark which is an environment. As this is ML1, only the task (i.e. the goal)
                                  #will vary. So ml1.train_classes is going to be of lenght 1
@@ -41,7 +42,7 @@ for bn_name in metaworld.ML1.ENV_NAMES:
 
     #print(colored(f"obj_init_angle, obj_init_pos, goal=={env.obj_init_angle}   ,  {env.obj_init_pos}    ,  {env.goal}", "red"))
     print(colored(f"obj_init_pos, goal=={env.obj_init_pos}    ,  {env.goal}", "red"))
-    if 0:
+    if 1:
         #for step in range(env.max_path_length):
         for step in range(300):
             #print("curr_path_length==",env.curr_path_length)

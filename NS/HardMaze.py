@@ -227,9 +227,9 @@ class HardMaze(Problem):
             if task_solved:
                 cv2.imwrite("//scratchbeta/salehia/tmp//solution.png", behavior_info)
         #pdb.set_trace()
-        return fitness, bd, task_solved, None
+        return fitness, bd, task_solved, None , None, None, None
 
-    def visualise_bds(self,archive, population, quitely=True, save_to=""):
+    def visualise_bds(self,archive, population, quitely=True, save_to="",generation_num=-1):
         """
         currently only for 2d generic ones of size 1, so bds should be [bd_0, ...] with bd_i of length 2
         """
@@ -286,7 +286,8 @@ class HardMaze(Problem):
             if len(save_to):
                 b,g,r=cv2.split(maze_im)
                 maze_im=cv2.merge([r,g,b])
-                cv2.imwrite(save_to+"/hardmaze_2d_bd_"+str(self.num_saved)+".png",maze_im)
+                gen_num=generation_num if generation_num!=-1 else self.num_saved
+                cv2.imwrite(save_to+"/hardmaze_2d_bd_"+str(gen_num)+".png",maze_im)
                 self.num_saved+=1
 
 

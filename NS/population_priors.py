@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="//scratchbeta/salehia/METAWORLD_EXPERIMENTS/NS_LOGS_pick_place_from_basket/",
+            logs_root="/tmp/NS_LOGS/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -440,21 +440,19 @@ if __name__=="__main__":
     
     if TRAIN_WITH_RANDOM_2D_MAZES:
 
-        #train_dataset_path="/home/achkan/datasets//mazes_8x8_train"
-        #test_dataset_path="/home/achkan/datasets//mazes_8x8_test"
-        #train_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_train"
-        #test_dataset_path="/home/achkan/datasets/2d_mazes_6x6_dataset_1/mazes_6x6_test"
+        train_dataset_path="/home/achkan/datasets//mazes_8x8_train"
+        test_dataset_path="/home/achkan/datasets//mazes_8x8_test"
 
-        train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train/"
-        test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test/"
+        #train_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_train/"
+        #test_dataset_path="/home/salehia/datasets/mazes/mazes_8x8_test/"
 
-        num_train_samples=40
-        num_test_samples=25
+        num_train_samples=30
+        num_test_samples=30
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="/scratchbeta/salehia/garbage_dir//",
+                tmp_dir="/tmp/",
                 from_dataset=train_dataset_path,
                 random_goals=False)
         
@@ -462,7 +460,7 @@ if __name__=="__main__":
         test_sampler=functools.partial(HardMaze.sample_mazes,
                 G=8, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
-                tmp_dir="/scratchbeta/salehia/garbage_dir/",
+                tmp_dir="/tmp/",
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
@@ -475,7 +473,7 @@ if __name__=="__main__":
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_factory=_make_2d_maze_ag,
-                top_level_log_root="/scratchbeta/salehia/distributed/meta_LOGS/")
+                top_level_log_root="/tmp/NS_LOGS")
 
         algo()
 
@@ -497,8 +495,8 @@ if __name__=="__main__":
             print("loaded_init_pop...")
 
         if 1:
-            num_train_samples=45
-            num_test_samples=45
+            num_train_samples=5
+            num_test_samples=5
 
             #task_name="pick-place-v2" 
             #task_name="soccer-v2"      #Success!
@@ -534,7 +532,7 @@ if __name__=="__main__":
                     num_train_samples=num_train_samples,
                     num_test_samples=num_test_samples,
                     agent_factory=_make_metaworld_ml1_ag,
-                    top_level_log_root="/scratchbeta/salehia/METAWORLD_EXPERIMENTS/META_LOGS_ML10/",
+                    top_level_log_root="/tmp/META_LOGS_ML1/",
                     resume_from_gen=resume_dict)
 
             experiment_config={"pop_sz":algo.pop_sz,
