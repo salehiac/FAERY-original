@@ -507,22 +507,11 @@ if __name__=="__main__":
             task_name="pick-place-v2"
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
-            train_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
-                    bd_type=behavior_descr_type,
-                    mode="train",
-                    task_name=task_name,
-                    tmp_dir=None)
-            
-            test_sampler=functools.partial(MetaworldProblems.sample_from_ml1_single_task,
-                    bd_type=behavior_descr_type,
-                    mode="test",
-                    task_name=task_name,
-                    tmp_dir=None)
-
-            
+            train_sampler=MetaworldProblems.SampleFromML1(bd_type=behavior_descr_type, mode="train",task_name=task_name)
+            test_sampler=MetaworldProblems.SampleFromML1(bd_type=behavior_descr_type, mode="test",task_name=task_name)
            
             G_outer=100
-            G_inner=200
+            G_inner=500
             algo=MetaQDForSparseRewards(pop_sz=40,
                     off_sz=40,
                     G_outer=G_outer,
@@ -578,8 +567,8 @@ if __name__=="__main__":
 
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
             
-            train_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="train", tmp_dir=None)
-            test_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="test", tmp_dir=None)
+            train_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="train")
+            test_sampler=MetaworldProblems.SampleSingleExampleFromML10(bd_type=behavior_descr_type,mode="test")
            
             g_outer=300
             g_inner=600
