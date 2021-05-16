@@ -132,7 +132,7 @@ def ns_instance(
             agent_factory=make_ag,
             visualise_bds_flag=1,#log to file
             map_type="scoop",#or "std"
-            logs_root="/tmp/NS_LOGS/",
+            logs_root="/home/achkan/Desktop/NS_LOGS/",
             compute_parent_child_stats=0,
             initial_pop=[x for x in population],
             problem_sampler=sampler)
@@ -429,8 +429,8 @@ class MetaQDForSparseRewards:
 
 if __name__=="__main__":
 
-    TRAIN_WITH_RANDOM_2D_MAZES=False
-    TRAIN_METAWORLD_ML1=True
+    TRAIN_WITH_RANDOM_2D_MAZES=True
+    TRAIN_METAWORLD_ML1=False
     TRAIN_METAWORLD_ML10=False
 
     #seems to create problems when not called in global scope, so, yeah.
@@ -439,6 +439,30 @@ if __name__=="__main__":
 
     
     if TRAIN_WITH_RANDOM_2D_MAZES:
+        
+        parser = argparse.ArgumentParser(description='meta experiments')
+        parser.add_argument('--resume', type=str,  help="path to a file population_prior_i with i a generation number", default="")
+        args = parser.parse_args()
+
+        resume_dict={}
+        if len(args.resume):
+            print("resuming...")
+            pop_fn=args.resume
+            with open(pop_fn,"rb") as fl:
+                resume_dict["init_pop"]=pickle.load(fl)
+            dig=[x for x in pop_fn[pop_fn.find("population_prior"):] if x.isdigit()]
+            dig=int(functools.reduce(lambda x,y: x+y, dig,""))
+            resume_dict["gen"]=dig
+            print("loaded_init_pop...")
+
+            orig_cfg=functools.reduce(lambda x,y: x+"/"+y, pop_fn.split("/")[:-1],"")+"/experiment_config"
+            with open(orig_cfg,"r") as fl:
+                orig_tsk_name=json.load(fl)["task_name"]
+            resuming_from_str=orig_tsk_name+"_"+str(dig)
+        else:
+            resuming_from_str=""
+
+
 
         train_dataset_path="/home/achkan/datasets//mazes_8x8_train"
         test_dataset_path="/home/achkan/datasets//mazes_8x8_test"
@@ -448,9 +472,10 @@ if __name__=="__main__":
 
         num_train_samples=30
         num_test_samples=30
+        maze_G=8
 
         train_sampler=functools.partial(HardMaze.sample_mazes,
-                G=8, 
+                G=maze_G, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
                 tmp_dir="/tmp/",
                 from_dataset=train_dataset_path,
@@ -458,22 +483,40 @@ if __name__=="__main__":
         
         
         test_sampler=functools.partial(HardMaze.sample_mazes,
-                G=8, 
+                G=maze_G, 
                 xml_template_path="../environments/env_assets/maze_template.xml",
                 tmp_dir="/tmp/",
                 from_dataset=test_dataset_path,
                 random_goals=False)
 
+        G_outer=100
+        G_inner=150
         algo=MetaQDForSparseRewards(pop_sz=24,
                 off_sz=24,
-                G_outer=100,
-                G_inner=150,
+                G_outer=G_outer,
+                G_inner=G_inner,
                 train_sampler=train_sampler,
                 test_sampler=test_sampler,
                 num_train_samples=num_train_samples,
                 num_test_samples=num_test_samples,
                 agent_factory=_make_2d_maze_ag,
-                top_level_log_root="/tmp/NS_LOGS")
+                top_level_log_root="/home/achkan/Desktop/NS_LOGS",
+                resume_from_gen=resume_dict)
+        
+        
+        experiment_config={"pop_sz":algo.pop_sz,
+                "off_sz":algo.off_sz, 
+                "num_train_samples":num_train_samples,
+                "num_test_samples":num_test_samples,
+                "task_name":"maze8x8" if maze_G==8 else "maze10x10",
+                "g_outer":G_outer,
+                "g_inner":G_inner,
+                "started_from_other_task":resuming_from_str}
+
+        with open(algo.top_level_log+"/experiment_config","w") as fl:
+            json.dump(experiment_config,fl)
+
+
 
         algo()
 
@@ -494,9 +537,17 @@ if __name__=="__main__":
             resume_dict["gen"]=dig
             print("loaded_init_pop...")
 
+            orig_cfg=functools.reduce(lambda x,y: x+"/"+y, pop_fn.split("/")[:-1],"")+"/experiment_config"
+            with open(orig_cfg,"r") as fl:
+                orig_tsk_name=json.load(fl)["task_name"]
+            resuming_from_str=orig_tsk_name+"_"+str(dig)
+        else:
+            resuming_from_str=""
+
+
         if 1:
-            num_train_samples=5
-            num_test_samples=5
+            num_train_samples=2
+            num_test_samples=2
 
             #task_name="pick-place-v2" 
             #task_name="soccer-v2"      #Success!
@@ -504,14 +555,15 @@ if __name__=="__main__":
             #task_name="window-open-v2"       #Not launched yet
             #task_name="assembly-v2" #doesn't work
             #task_name="basketball-v2"
-            task_name="pick-place-v2"
+            #task_name="pick-place-v2"
+            task_name="shelf-place-v2"
             behavior_descr_type="type_3"#for most envs type_3 is the best behavior descriptor as it is based on the final position of the manipulated objects.
 
             train_sampler=MetaworldProblems.SampleFromML1(bd_type=behavior_descr_type, mode="train",task_name=task_name)
             test_sampler=MetaworldProblems.SampleFromML1(bd_type=behavior_descr_type, mode="test",task_name=task_name)
            
             G_outer=100
-            G_inner=500
+            G_inner=1
             algo=MetaQDForSparseRewards(pop_sz=40,
                     off_sz=40,
                     G_outer=G_outer,
@@ -531,7 +583,7 @@ if __name__=="__main__":
                 "task_name":task_name,
                 "g_outer":G_outer,
                 "g_inner":G_inner,
-                "started_from_other_task":"basketball-v2-gen380"}
+                "started_from_other_task":resuming_from_str}
 
             with open(algo.top_level_log+"/experiment_config","w") as fl:
               json.dump(experiment_config,fl)

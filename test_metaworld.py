@@ -21,8 +21,16 @@ for bn_name in metaworld.ML1.ENV_NAMES:
 
     print(bn_name)
     #bn_name="basketball-v2"
+    #bn_name="hammer-v2"
+    #bn_name="assembly-v2"
     #bn_name="pick-place-v2"
+    #bn_name="hand-insert-v2"
+    bn_name="button-press-topdown-v2"
+    bn_name="plate-slide-back-v2"
+    bn_name="sweep-v2"
     bn_name="hand-insert-v2"
+    bn_name="disassemble-v2"
+    bn_name="soccer-v2"
 
     ml1 = metaworld.ML1(bn_name) #constructs the benchmark which is an environment. As this is ML1, only the task (i.e. the goal)
                                  #will vary. So ml1.train_classes is going to be of lenght 1
