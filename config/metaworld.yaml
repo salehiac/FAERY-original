@@ -22,7 +22,7 @@ selector:
 problem:
   name: "metaworld-ml1" 
   env_conf: ["hammer-v2", "train"] #see metaworld.ML1.ENV_NAMES for the first argument, the second can either be "train" or "eval"
-  bd_type: "type_3" #choices are type_i with i in {0,1,2,3}, see MetaWorldProblems.py. The best choice for most tasks is type_4, as it relies on the end position of the manipulated object.
+  bd_type: "type_3" #choices are type_i with i in {0,1,2,3}, see MetaWorldProblems.py. The best choice for most tasks is type_3, as it relies on the end position of the manipulated object.
   max_steps: -1 #dicated by ml1
   assets: {}
 population:

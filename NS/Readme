@@ -1,7 +1,0 @@
-
-
-Initially, I wanted to avoid passing agent lists directly to future.map (to reduce copying costs), instead I wanted to pass indexes and keep the agent list as shared object, either as a gloabl or as a scoop.shared constant. It didn't work (global variables seem to be read at the begining of exectution with -m scoop, so when the global variable is set to some value in __main__, the worker versions
-aren't updated. Note that this wouldn't have happend with ipyparallel as you can set variables on all workers later. Also, when using scoop.shared.setconstant("pop"=some_stuff), you can just set it 
-once...).
-
-This doesn't mean scoop is a worse library than ipyparallel though. Ipyparallel is more powerful but it's easier to messup stuff with it. Scoop probably just aims for simplicity.
