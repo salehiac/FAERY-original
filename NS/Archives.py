@@ -21,8 +21,6 @@ import numpy as np
 import pickle
 import pdb
 
-import expected_distance
-
 
 class Archive(ABC):
     """
@@ -87,38 +85,6 @@ class ListArchive(Archive):
         if self.removal_strategy == "random":
             r = random.sample(range(len(self)), k=self.max_size)
             self.container = [self.container[i] for i in r]
-        elif self.removal_strategy == "optimal":
-
-            if parents.shape[0] != 2:
-                raise Exception("this has only be implemented for 2d bds")
-
-            #the order of concatenation is important for the indexations that come next
-            reference_set = np.concatenate([
-                np.concatenate([x._behavior_descr for x in self.container],
-                               0).transpose(), parents
-            ], 1)
-
-            archive_sz = len(self.container)
-            e_ls = []
-            for l in range(archive_sz
-                           ):  #only elements from the archive can be removed
-                #e_l, _ =expected_distance.expectation(reference_set, l, k=knn_k, G=50, space_boundaries=boundaries)
-                e_l, _ = expected_distance.expectation_parallel(
-                    reference_set,
-                    l,
-                    k=knn_k,
-                    G=50,
-                    space_boundaries=boundaries)
-                e_ls.append(e_l)
-
-            sorted_ids = np.argsort(
-                e_ls
-            )[::
-              -1]  #decreasing residual expecation, so we should remove from the end
-            self.container = [
-                self.container[i] for i in sorted_ids[:self.max_size]
-            ]
-            #pdb.set_trace()
         else:
             raise NotImplementedError("manag_size")
 
