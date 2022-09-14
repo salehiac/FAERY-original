@@ -137,7 +137,6 @@ class SmallFC_FW(torch.nn.Module, Agent):
                  num_hidden=3,
                  hidden_dim=10,
                  non_lin="tanh",
-                 use_bn=False,
                  output_normalisation=""):
         torch.nn.Module.__init__(self)
         Agent.__init__(self, idx)
@@ -149,7 +148,6 @@ class SmallFC_FW(torch.nn.Module, Agent):
         self.mds.append(torch.nn.Linear(hidden_dim, out_d))
 
         self.non_lin = _non_lin_dict[non_lin]
-        self.bn = torch.nn.BatchNorm1d(hidden_dim) if use_bn else _identity
 
         self.output_normaliser = _non_lin_dict[
             output_normalisation] if output_normalisation else _identity
@@ -160,7 +158,7 @@ class SmallFC_FW(torch.nn.Module, Agent):
         """
         out = torch.Tensor(x).unsqueeze(0)
         for md in self.mds[:-1]:
-            out = self.bn(self.non_lin(md(out)))
+            out = self.non_lin(md(out))
         out = self.mds[-1](out)
         out = self.output_normaliser(out)
         return out.detach().cpu().numpy() if return_numpy else out

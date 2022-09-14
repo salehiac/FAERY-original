@@ -24,12 +24,15 @@ https://arxiv.org/pdf/2109.06826.pdf
     - PyFastSim (https://github.com/alexendy/pyfastsim)
     - fastSimGym (https://github.com/alexendy/fastsim\_gym)
 
+Other requirements can be found in `requirements.txt`.
+
 # Usage
 
 The results of the paper can be reproduced via
 
 ```
-python -m scoop -n <num_procs>  population_priors.py  <args>
+$ cd NS
+$ python -m scoop -n <num_procs>  population_priors.py  <args>
 ```
 
 For the maze experiments, you will need to generate random mazes using the script `FAERY-original/environments/maze_generator/maze_generator.py`.
